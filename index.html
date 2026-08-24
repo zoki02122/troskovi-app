@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#163B69">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Troškovi</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#FFFFFF; --bg-card:#F7F5EF; --bg-elevated:#EFEADD;
+    --gold:#B8860B; --gold-deep:#96690A; --blue:#1D4E89; --blue-deep:#163B69;
+    --coral:#B3432D;
+    --text:#20242B; --text-dim:#6B7280; --line:#E4E0D4;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; padding:0; min-height:100%; background:var(--bg); color:var(--text);
+    font-family:-apple-system,"Segoe UI",Roboto,sans-serif; overscroll-behavior:none; }
+  .num{ font-variant-numeric:tabular-nums; }
+  #app{ max-width:560px; margin:0 auto; padding:0 0 128px; min-height:100vh; position:relative; }
+
+  .topbar{ position:sticky; top:0; z-index:10; background:var(--bg); padding:12px 12px 6px; border-bottom:1px solid var(--line); }
+  .tb-row{ display:flex; align-items:stretch; gap:7px; min-width:0; }
+  .tb-half{ flex:1 1 50%; min-width:0; display:flex; align-items:center; }
+
+  .project-switch{ display:flex; align-items:center; gap:6px; background:var(--bg-card); border-radius:12px; padding:10px 11px; cursor:pointer; border:1px solid var(--line); width:100%; min-width:0; }
+  .project-switch .name{ font-size:14.5px; font-weight:700; color:var(--blue-deep); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; flex:1 1 auto; }
+  .proj-date-inline{ font-size:10.5px; color:var(--text-dim); font-weight:600; flex:none; border-left:1px solid var(--line); padding-left:6px; margin-left:2px; }
+  .project-switch .chev{ color:var(--text-dim); font-size:12px; margin-left:auto; flex:none; }
+  .icon-btn{ width:36px; height:36px; border-radius:10px; background:var(--bg-card); border:1px solid var(--line); color:var(--blue-deep); font-size:14px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none; }
+
+  .view-toggle{ display:flex; gap:3px; background:var(--bg-card); border-radius:9px; padding:2px; border:1px solid var(--line); width:100%; }
+  .view-toggle button{ flex:1; border:none; background:transparent; padding:8px 7px; font-size:11px; font-weight:700; color:var(--text-dim); border-radius:7px; cursor:pointer; }
+  .view-toggle button.active{ background:var(--blue-deep); color:#fff; }
+  .cur-toggle{ display:flex; gap:3px; background:var(--bg-card); border-radius:9px; padding:2px; border:1px solid var(--line); flex:none; }
+  .cur-toggle button{ border:none; background:transparent; padding:5px 7px; font-size:10px; font-weight:700; color:var(--text-dim); border-radius:6px; cursor:pointer; }
+  .cur-toggle button.active{ background:var(--gold); color:#fff; }
+
+  .rate-row{ display:flex; align-items:center; gap:6px; width:100%; }
+  .rate-bar-compact{ flex:1; min-width:0; background:#FFF8E8; border:1px solid #EBD9A8; border-radius:10px; padding:7px 9px; font-size:10.5px; color:var(--gold-deep); font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rate-bar-compact .val{ font-weight:800; }
+  .tr2-total{ width:100%; text-align:right; background:var(--blue-deep); border-radius:10px; padding:7px 12px; }
+  .tr2-total .tr2-label{ display:block; font-size:8.5px; color:#DCE6F2; text-transform:uppercase; letter-spacing:0.3px; }
+  .tr2-total .tr2-val{ display:block; font-size:16px; font-weight:800; color:#F5C15C; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  .list-area{ padding:10px 10px 0; }
+  .group-block{ margin-bottom:12px; border:1px solid var(--line); border-radius:11px; overflow:hidden; }
+  .group-head{ background:var(--blue-deep); color:#fff; font-size:10px; font-weight:700; padding:3px 10px; letter-spacing:0.2px; }
+  table.entries-table{ width:100%; border-collapse:collapse; background:#fff; }
+  table.entries-table td{ padding:8px 10px; font-size:13px; border-bottom:1px solid var(--line); vertical-align:top; }
+  table.entries-table tr:last-child td{ border-bottom:none; }
+  table.entries-table tr:nth-child(even){ background:#FBFAF6; }
+  td.col-opis{ font-weight:600; }
+  td.col-opis .meta{ display:block; font-size:10.5px; font-weight:400; color:var(--text-dim); margin-top:1px; }
+  td.col-amt{ text-align:right; white-space:nowrap; font-weight:700; }
+  td.col-amt .sub{ display:block; font-size:10px; font-weight:400; color:var(--text-dim); }
+  tr.total-row td{ background:#FFF8E8; font-weight:800; color:var(--gold-deep); font-size:12.5px; padding:7px 10px; }
+
+
+  .empty{ text-align:center; color:var(--text-dim); padding:50px 24px; font-size:14.5px; line-height:1.7; }
+  #statusBanner{
+    position:fixed; top:0; left:0; right:0; z-index:50;
+    max-width:560px; margin:0 auto;
+    padding:12px 16px; font-size:13.5px; font-weight:600; line-height:1.5;
+    display:none; align-items:flex-start; gap:10px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.15);
+  }
+  #statusBanner.show{ display:flex; }
+  #statusBanner.error{ background:#B3432D; color:#fff; }
+  #statusBanner.info{ background:#163B69; color:#fff; }
+  #statusBanner .closeBtn{ margin-left:auto; flex:none; background:none; border:none; color:#fff; font-size:16px; cursor:pointer; opacity:0.8; }
+  #undoToast{
+    position:fixed; left:14px; right:14px; bottom:172px; max-width:532px; margin:0 auto; z-index:45;
+    background:#20242B; color:#fff; border-radius:12px; padding:11px 14px;
+    display:none; align-items:center; justify-content:space-between; gap:10px;
+    font-size:13px; box-shadow:0 4px 14px rgba(0,0,0,0.3);
+  }
+  #undoToast.show{ display:flex; }
+  #undoToast button{ background:var(--gold); color:#fff; border:none; border-radius:8px; padding:7px 13px; font-weight:700; font-size:12.5px; cursor:pointer; flex:none; }
+  .search-row{ padding:0 12px; margin-top:7px; display:flex; gap:7px; align-items:center; }
+  .search-row input{ flex:1; min-width:0; padding:9px 12px; border-radius:10px; border:1px solid var(--line); background:var(--bg-card); color:var(--text); font-size:13.5px; font-family:inherit; }
+  .search-close-btn{ flex:none; width:36px; height:36px; border-radius:10px; border:1px solid var(--line); background:var(--bg-card); color:var(--coral); font-size:15px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+
+
+
+  .bottom-bar{ position:fixed; bottom:0; left:0; right:0; max-width:560px; margin:0 auto; padding:8px 10px calc(8px + env(safe-area-inset-bottom)); background:#fff; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:6px; }
+  .entry-row{ display:flex; gap:7px; align-items:center; }
+  .entry-input-wrap{ flex:1; position:relative; display:flex; align-items:center; background:var(--bg-card); border:1px solid var(--line); border-radius:24px; padding:4px 4px 4px 15px; }
+  .entry-input-wrap input{ flex:1; border:none; background:transparent; padding:9px 6px; font-size:14.5px; color:var(--text); font-family:inherit; }
+  .entry-input-wrap input::placeholder{ color:var(--text-dim); }
+  @keyframes pulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(179,67,45,0.4);} 50%{ box-shadow:0 0 0 8px rgba(179,67,45,0);} }
+  .send-btn{ width:58px; height:58px; border-radius:50%; border:none; background:var(--blue-deep); color:#fff; font-size:22px; cursor:pointer; flex:none; }
+
+  .pending-card{ background:#FFF8E8; border:1.5px solid var(--gold); border-radius:13px; padding:10px 12px; }
+  .pending-card .row{ display:flex; gap:7px; margin-bottom:7px; align-items:center; }
+  .pending-card input{ background:#fff; border:1px solid var(--line); border-radius:8px; color:var(--text); padding:7px 9px; font-size:13.5px; font-family:inherit; }
+  .pending-card .f-opis{ flex:1; min-width:0; }
+  .pending-card .f-iznos{ width:80px; }
+  .pending-card .f-valuta{ width:56px; text-transform:uppercase; text-align:center; }
+  .pending-card .f-kat{ width:90px; }
+  .pending-actions{ display:flex; align-items:center; gap:7px; }
+  .pending-actions .countdown{ width:26px; height:26px; border-radius:50%; position:relative; flex:none; background:conic-gradient(var(--gold) var(--pct,0%), #EBD9A8 0); }
+  .pending-actions button{ border:none; border-radius:9px; padding:9px 13px; font-size:12.5px; font-weight:700; cursor:pointer; }
+  .btn-cancel{ background:#EFEADD; color:var(--text); }
+  .btn-save{ background:var(--gold); color:#fff; flex:1; }
+  .batch-remove{ background:#EFEADD; color:var(--text); padding:7px 9px !important; }
+
+  .modal-backdrop{ position:fixed; inset:0; background:rgba(20,20,20,0.5); display:flex; align-items:flex-end; justify-content:center; z-index:30; }
+  .modal-backdrop.small-modal{ align-items:flex-start; padding:70px 16px 0; }
+  .modal-backdrop.small-modal .modal{ border-radius:20px; max-height:none; }
+  .modal{ background:#fff; width:100%; max-width:560px; border-radius:20px 20px 0 0; padding:20px 18px calc(20px + env(safe-area-inset-bottom)); max-height:85vh; overflow-y:auto; overflow-x:hidden; box-sizing:border-box; }
+  .modal h2{ margin:0 0 14px; font-size:18px; color:var(--blue-deep); padding-right:34px; }
+  .modal-close-x{ position:absolute; top:16px; right:16px; width:30px; height:30px; border-radius:50%; border:none; background:var(--bg-card); color:var(--text-dim); font-size:15px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:5; }
+  .modal{ position:relative; }
+  .proj-item{ display:flex; align-items:center; gap:10px; padding:13px 12px; border-radius:12px; margin-bottom:6px; background:var(--bg-card); cursor:pointer; border:1px solid var(--line); }
+  .proj-item.active{ border:1.5px solid var(--gold); background:#FFF8E8; }
+  .proj-item .pname{ flex:1; font-size:15px; font-weight:600; }
+
+  .settings-section{ margin-bottom:20px; }
+  .settings-section-label{ font-size:11px; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px; padding:0 4px 7px; }
+  .settings-card{ background:var(--bg-card); border-radius:13px; border:1px solid var(--line); overflow:hidden; }
+  .settings-field{ padding:12px 14px; border-bottom:1px solid var(--line); }
+  .settings-field:last-child{ border-bottom:none; }
+  .settings-field label{ font-size:11.5px; color:var(--text-dim); display:block; margin-bottom:5px; }
+  .settings-field input, .settings-field select{ width:100%; border:none; background:transparent; padding:0; font-size:15px; color:var(--text); font-family:inherit; font-weight:600; }
+  .settings-row{ display:flex; align-items:center; gap:10px; padding:14px; border-bottom:1px solid var(--line); cursor:pointer; background:none; border-left:none; border-right:none; border-top:none; width:100%; text-align:left; font-family:inherit; }
+  .settings-row:last-child{ border-bottom:none; }
+  .settings-row:active{ background:var(--bg-elevated); }
+  .settings-row .row-icon{ font-size:16px; flex:none; width:20px; text-align:center; }
+  .settings-row .row-label{ flex:1; font-size:14px; font-weight:600; color:var(--text); }
+  .settings-row .chevron{ color:var(--text-dim); font-size:13px; flex:none; }
+  .settings-danger-row{ color:var(--coral); }
+  .settings-danger-row .row-label{ color:var(--coral); }
+  .settings-hint{ font-size:11px; color:var(--text-dim); padding:8px 4px 0; line-height:1.5; }
+  .field{ margin-bottom:14px; }
+  .field label{ font-size:13px; color:var(--text-dim); display:block; margin-bottom:6px; }
+  .field input, .field select{ width:100%; padding:12px; border-radius:10px; border:1px solid var(--line); background:var(--bg-card); color:var(--text); font-size:15px; font-family:inherit; }
+  .date-trio{ display:flex; gap:7px; }
+  .date-trio input{ text-align:center; padding:12px 4px; border-radius:10px; border:1px solid var(--line); background:var(--bg-card); color:var(--text); font-size:15px; font-family:inherit; }
+  .date-trio .dd,.date-trio .mm{ width:60px; }
+  .date-trio .yy{ width:84px; }
+  .modal-actions{ display:flex; gap:10px; margin-top:6px; }
+  .modal-actions button{ flex:1; padding:14px; border-radius:12px; border:none; font-size:15px; font-weight:700; cursor:pointer; }
+  .cancel-btn{ background:var(--bg-card); color:var(--text); border:1px solid var(--line); }
+  .create-btn{ background:var(--blue-deep); color:#fff; }
+  .delete-btn{ background:var(--coral); color:#fff; }
+</style>
+</head>
+<body>
+<div id="statusBanner"></div>
+<div id="undoToast"></div>
+<div id="app"></div>
+
+<script>
+/* ---------- STATE ---------- */
+let projects = [];
+let currentProjectId = null;
+let entries = [];
+let rates = {};
+let viewMode = 'datum';
+let searchOpen = false;
+let searchQuery = '';
+function toggleSearch(){
+  const wasOpen = searchOpen;
+  searchOpen = !searchOpen;
+  if(!searchOpen){ searchQuery=''; }
+  render();
+  if(searchOpen){
+    try{ history.pushState({searchOpen:true}, '', location.href); }catch(e){}
+    setTimeout(()=>{ const el=document.getElementById('searchInput'); if(el) el.focus(); },100);
+  } else if(wasOpen && window.history.state && window.history.state.searchOpen){
+    try{ history.back(); }catch(e){}
+  }
+}
+function setSearchQuery(v){
+  searchQuery = v;
+  const cursorPos = v.length;
+  render();
+  const el = document.getElementById('searchInput');
+  if(el){ el.focus(); try{ el.setSelectionRange(cursorPos, cursorPos); }catch(e){} }
+}
+let pendingItems = null;
+let pendingTimer = null;
+let pendingPct = 0;
+let isProcessing = false;
+const LANGS = [
+  {code:'auto', label:'Automatski (jezik telefona)'},
+  {code:'sr-RS', label:'Srpski'},{code:'en-US', label:'Engleski'}
+];
+
+/* ---------- I18N: mehanizam za prevod cele aplikacije ---------- */
+function resolveAppLanguage(){
+  const proj = currentProject();
+  const setting = proj ? proj.language : 'auto';
+  if(setting && setting !== 'auto') return setting;
+  const nav = (navigator.language || 'en').toLowerCase();
+  return nav.startsWith('sr') ? 'sr-RS' : 'en-US';
+}
+const I18N = {
+  'sr-RS': {
+    empty_project: 'Nema unetih troškova u ovom projektu.',
+    empty_project_hint: 'Diktiraj ili ukucaj prvu stavku ispod.',
+    total: 'Ukupno',
+    exchange_rate_unknown: 'kurs?',
+    no_search_results: 'Nema stavki koje odgovaraju pretrazi',
+    cancel: 'Otkaži',
+    save_now: 'Sačuvaj sad',
+    recognized_items: 'Prepoznato',
+    review_and_save: 'stavki - proveri pa sačuvaj',
+    duplicate_exists: 'Već postoji',
+    on_date: 'na',
+    possible_duplicate: 'moguć duplikat',
+    category_placeholder: 'kategorija',
+    cancel_all: 'Otkaži sve',
+    save_all: 'Sačuvaj sve',
+    new_project: 'Novi projekat',
+    search: 'Pretraga',
+    settings: 'Podešavanja',
+    search_placeholder: 'Pretraži po opisu, kategoriji, napomeni...',
+    date: 'Datum',
+    category: 'Kategorija',
+    items_short: 'st.',
+    manual_input_placeholder: 'Ukucaj ili koristi mikrofon na tastaturi...',
+    project_settings_title: 'Podešavanja projekta',
+    section_basic: 'Osnovno',
+    project_name: 'Naziv projekta',
+    app_language: 'Jezik aplikacije',
+    save: 'Sačuvaj',
+    section_data: 'Podaci',
+    export_project_excel: 'Izvezi ovaj projekat u Excel',
+    backup_export: 'Rezervna kopija - izvezi (svi projekti)',
+    backup_import: 'Rezervna kopija - uvezi',
+    backup_hint: 'Rezervna kopija čuva SVE projekte odjednom - sačuvaj je povremeno (npr. u Google Drive) da ne izgubiš podatke.',
+    section_ai_key: 'AI ključ',
+    gemini_key_label: 'Google Gemini API ključ',
+    save_key: 'Sačuvaj ključ',
+    delete: 'Obriši',
+    key_hint: 'Ključ se čuva samo na ovom telefonu, u ovom pregledaču. Napraviš ga besplatno na aistudio.google.com (bez kartice) → Get API key.',
+    section_danger: 'Opasna zona',
+    delete_project: 'Obriši projekat',
+    new_project_placeholder: 'npr. Renoviranje kupatila',
+    create: 'Napravi',
+    confirm_title: 'Potvrda',
+    default_yes_delete: 'Da, obriši',
+    no: 'Ne',
+    rate_title: 'Kurs valute',
+    rate_how_much: 'koliko',
+    rate_placeholder: 'npr. 117.50',
+    currency_pair_title: 'Izaberi valute',
+    first_currency: 'Prva valuta',
+    second_currency: 'Druga valuta',
+    choose_diff_currencies: 'Izaberi dve različite valute.',
+    date_modal_title: 'Datum unosa',
+    edit_entry_title: 'Izmeni stavku',
+    label_description: 'Opis',
+    label_amount: 'Iznos',
+    label_currency: 'Valuta',
+    label_note: 'Napomena',
+    confirm_delete_entry: 'Obrisati ovu stavku troška? Ovo ne može da se poništi.',
+    no_projects_found: 'Nema projekata koji odgovaraju pretrazi.',
+    created_on: 'Napravljen',
+    selected: 'izabrano',
+    export_short: 'Izvezi',
+    delete_short: 'Obriši',
+    exported_projects: 'Izvezeno',
+    projects_word: 'projekata',
+    confirm_delete_projects: 'Obrisati',
+    confirm_delete_projects_end: 'izabranih projekata i sve njihove troškove? Ovo ne može da se poništi.',
+    projects_deleted: 'projekata obrisano.',
+    projects_title: 'Projekti',
+    search_projects_placeholder: '🔍 Pretraži projekte...',
+    long_press_hint: 'Dug dodir na projekat za brisanje/izvoz više odjednom',
+    restored: 'Vraćeno.',
+    ai_processing_error: 'Greška pri obradi. Pokušaj ponovo.',
+    ai_no_items_recognized: 'AI nije prepoznao nijednu stavku iz tog teksta. Probaj drugačiju formulaciju (npr. "naziv 10 eur").',
+    backup_downloaded: 'Rezervna kopija preuzeta - sačuvaj je na sigurno mesto (npr. Google Drive).',
+    import_field_missing: 'Greška: polje za uvoz nije pronađeno na stranici.',
+    cannot_open_file_picker: 'Ne mogu da otvorim izbor fajla:',
+    file_not_valid_json: 'Fajl nije validan (nije ispravan JSON).',
+    file_not_valid_backup: 'Ovaj fajl ne izgleda kao ispravna rezervna kopija.',
+    backup_will_replace: 'Ovo će ZAMENITI sve trenutne projekte podacima iz rezervne kopije',
+    backup_will_replace_mid: 'projekat(a) iz',
+    backup_unknown_date: 'nepoznatog datuma',
+    backup_current_lost: 'Trenutni podaci će biti izgubljeni. Nastaviti?',
+    backup_imported_ok: 'Rezervna kopija uspešno uvezena.',
+    api_key_saved: 'API ključ sačuvan.',
+    confirm_delete_api_key: 'Obrisati sačuvani API ključ? Glasovni/AI unos neće raditi dok ne uneseš novi.',
+    api_key_deleted: 'API ključ obrisan.',
+    no_items_to_export: 'Nema stavki za izvoz u ovom projektu.',
+    excel_downloading: 'se preuzima - proveri Preuzimanja na telefonu.',
+    confirm_delete_project_full: 'Obrisati projekat',
+    confirm_delete_project_full_end: 'i sve njegove troškove? Ovo ne može da se poništi.',
+    default_project_name: 'Novi projekat'
+  },
+  'en-US': {
+    empty_project: 'No expenses entered in this project yet.',
+    empty_project_hint: 'Dictate or type the first item below.',
+    total: 'Total',
+    exchange_rate_unknown: 'rate?',
+    no_search_results: 'No items match the search',
+    cancel: 'Cancel',
+    save_now: 'Save now',
+    recognized_items: 'Recognized',
+    review_and_save: 'items - review and save',
+    duplicate_exists: 'Already exists',
+    on_date: 'on',
+    possible_duplicate: 'possible duplicate',
+    category_placeholder: 'category',
+    cancel_all: 'Cancel all',
+    save_all: 'Save all',
+    new_project: 'New project',
+    search: 'Search',
+    settings: 'Settings',
+    search_placeholder: 'Search by description, category, note...',
+    date: 'Date',
+    category: 'Category',
+    items_short: 'items',
+    manual_input_placeholder: 'Type or use the keyboard microphone...',
+    project_settings_title: 'Project settings',
+    section_basic: 'Basics',
+    project_name: 'Project name',
+    app_language: 'App language',
+    save: 'Save',
+    section_data: 'Data',
+    export_project_excel: 'Export this project to Excel',
+    backup_export: 'Backup - export (all projects)',
+    backup_import: 'Backup - import',
+    backup_hint: 'The backup saves ALL projects at once - save it occasionally (e.g. to Google Drive) so you don\'t lose your data.',
+    section_ai_key: 'AI key',
+    gemini_key_label: 'Google Gemini API key',
+    save_key: 'Save key',
+    delete: 'Delete',
+    key_hint: 'The key is stored only on this phone, in this browser. Get one for free at aistudio.google.com (no card needed) → Get API key.',
+    section_danger: 'Danger zone',
+    delete_project: 'Delete project',
+    new_project_placeholder: 'e.g. Bathroom renovation',
+    create: 'Create',
+    confirm_title: 'Confirmation',
+    default_yes_delete: 'Yes, delete',
+    no: 'No',
+    rate_title: 'Exchange rate',
+    rate_how_much: 'how much',
+    rate_placeholder: 'e.g. 117.50',
+    currency_pair_title: 'Choose currencies',
+    first_currency: 'First currency',
+    second_currency: 'Second currency',
+    choose_diff_currencies: 'Choose two different currencies.',
+    date_modal_title: 'Entry date',
+    edit_entry_title: 'Edit item',
+    label_description: 'Description',
+    label_amount: 'Amount',
+    label_currency: 'Currency',
+    label_note: 'Note',
+    confirm_delete_entry: 'Delete this expense item? This cannot be undone.',
+    no_projects_found: 'No projects match the search.',
+    created_on: 'Created',
+    selected: 'selected',
+    export_short: 'Export',
+    delete_short: 'Delete',
+    exported_projects: 'Exported',
+    projects_word: 'projects',
+    confirm_delete_projects: 'Delete',
+    confirm_delete_projects_end: 'selected projects and all their expenses? This cannot be undone.',
+    projects_deleted: 'projects deleted.',
+    projects_title: 'Projects',
+    search_projects_placeholder: '🔍 Search projects...',
+    long_press_hint: 'Long-press a project to delete/export multiple at once',
+    restored: 'Restored.',
+    ai_processing_error: 'Error while processing. Please try again.',
+    ai_no_items_recognized: 'The AI couldn\'t recognize any item in that text. Try a different phrasing (e.g. "name 10 eur").',
+    backup_downloaded: 'Backup downloaded - save it somewhere safe (e.g. Google Drive).',
+    import_field_missing: 'Error: import field not found on the page.',
+    cannot_open_file_picker: 'Could not open the file picker:',
+    file_not_valid_json: 'The file is not valid (not proper JSON).',
+    file_not_valid_backup: 'This file doesn\'t look like a valid backup.',
+    backup_will_replace: 'This will REPLACE all current projects with the data from the backup',
+    backup_will_replace_mid: 'project(s) from',
+    backup_unknown_date: 'unknown date',
+    backup_current_lost: 'Current data will be lost. Continue?',
+    backup_imported_ok: 'Backup imported successfully.',
+    api_key_saved: 'API key saved.',
+    confirm_delete_api_key: 'Delete the saved API key? Voice/AI entry won\'t work until you enter a new one.',
+    api_key_deleted: 'API key deleted.',
+    no_items_to_export: 'No items to export in this project.',
+    excel_downloading: 'is downloading - check Downloads on your phone.',
+    confirm_delete_project_full: 'Delete project',
+    confirm_delete_project_full_end: 'and all its expenses? This cannot be undone.',
+    default_project_name: 'New project'
+  }
+};
+function t(key){
+  const lang = resolveAppLanguage();
+  return (I18N[lang] && I18N[lang][key]) || (I18N['sr-RS'] && I18N['sr-RS'][key]) || key;
+}
+
+function uid(p){ return p+Date.now()+Math.random().toString(36).slice(2,7); }
+function todayISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function dmFromISO(iso){ const [y,m,d]=iso.split('-'); return d+'.'+m; }
+function dmyFromISO(iso){ const [y,m,d]=iso.split('-'); return d+'.'+m+'.'+y; }
+function dmyFromTimestamp(ts){
+  const d = new Date(ts);
+  return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear();
+}
+function isoFromParts(d,m,y){ return y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
+function fmtNum(n){ return (Math.round(n*100)/100).toLocaleString('sr-RS',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+let bannerTimeout = null;
+function showBanner(msg, type){
+  type = type || 'error';
+  const b = document.getElementById('statusBanner');
+  b.className = 'show ' + type;
+  b.innerHTML = '<span>'+escapeHtml(msg)+'</span><button class="closeBtn" onclick="hideBanner()">✕</button>';
+  clearTimeout(bannerTimeout);
+  bannerTimeout = setTimeout(hideBanner, 8000);
+}
+function hideBanner(){
+  const b = document.getElementById('statusBanner');
+  if(b){ b.className=''; }
+  clearTimeout(bannerTimeout);
+}
+
+let lastDeleted = null;
+let undoTimeout = null;
+function showUndoToast(message){
+  const t = document.getElementById('undoToast');
+  if(!t) return;
+  t.className = 'show';
+  t.innerHTML = '<span>'+escapeHtml(message)+'</span><button onclick="performUndo()">Poništi</button>';
+  clearTimeout(undoTimeout);
+  undoTimeout = setTimeout(hideUndoToast, 6000);
+}
+function hideUndoToast(){
+  const t = document.getElementById('undoToast');
+  if(t) t.className = '';
+  clearTimeout(undoTimeout);
+  lastDeleted = null;
+}
+function performUndo(){
+  if(!lastDeleted) return;
+  if(lastDeleted.type === 'entry'){
+    if(lastDeleted.projectId === currentProjectId){
+      entries.push(lastDeleted.entry);
+      persistEntries();
+    } else {
+      const e = lsGet('entries:'+lastDeleted.projectId);
+      let arr = (e && e.value) ? JSON.parse(e.value) : [];
+      arr.push(lastDeleted.entry);
+      lsSet('entries:'+lastDeleted.projectId, JSON.stringify(arr));
+    }
+  } else if(lastDeleted.type === 'project'){
+    projects.push(lastDeleted.project);
+    persistProjects();
+    lsSet('entries:'+lastDeleted.project.id, JSON.stringify(lastDeleted.entries));
+    lsSet('rates:'+lastDeleted.project.id, JSON.stringify(lastDeleted.rates));
+  }
+  const t = document.getElementById('undoToast');
+  if(t) t.className = '';
+  clearTimeout(undoTimeout);
+  lastDeleted = null;
+  render();
+  showBanner(t('restored'), 'info');
+}
+
+
+
+/* ---------- PERSISTENCE (localStorage - radi trajno u Chrome-u) ---------- */
+function lsGet(key){ try{ const v = localStorage.getItem(key); return v===null ? null : {value:v}; }catch(e){ return null; } }
+function lsSet(key,val){ try{ localStorage.setItem(key, val); return {value:val}; }catch(e){ return null; } }
+function lsDelete(key){ try{ localStorage.removeItem(key); }catch(e){} }
+
+async function loadAll(){
+  const p = lsGet('app:projects');
+  if(p && p.value){ try{ projects = JSON.parse(p.value); }catch(e){ projects=[]; } }
+  const l = lsGet('app:lastProjectId');
+  if(l && l.value) currentProjectId = l.value;
+
+  if(projects.length === 0){
+    const np = { id: uid('p'), name: t('default_project_name'), language:'auto', displayCurrency:null, activeDate: todayISO(), createdAt: Date.now() };
+    projects.push(np);
+    currentProjectId = np.id;
+    persistProjects();
+    persistLastProject();
+  }
+  if(!currentProjectId || !projects.find(pr=>pr.id===currentProjectId)) currentProjectId = projects[0].id;
+  const today = todayISO();
+  let anyDateReset = false;
+  projects.forEach(pr=>{
+    if(!pr.activeDate || pr.activeDate !== today){ pr.activeDate = today; anyDateReset = true; }
+  });
+  if(anyDateReset) persistProjects();
+  loadProjectData(currentProjectId);
+  render();
+}
+function persistProjects(){ lsSet('app:projects', JSON.stringify(projects)); }
+function persistLastProject(){ lsSet('app:lastProjectId', currentProjectId); }
+function loadProjectData(pid){
+  const e = lsGet('entries:'+pid);
+  entries = (e && e.value) ? JSON.parse(e.value) : [];
+  const r = lsGet('rates:'+pid);
+  rates = (r && r.value) ? JSON.parse(r.value) : {};
+}
+function persistEntries(){ lsSet('entries:'+currentProjectId, JSON.stringify(entries)); }
+function persistRates(){ lsSet('rates:'+currentProjectId, JSON.stringify(rates)); }
+function getApiKey(){ const k = lsGet('app:apiKey'); return k ? k.value : ''; }
+function setApiKey(key){ lsSet('app:apiKey', key); }
+
+/* ---------- CURRENCY ---------- */
+function currentProject(){ return projects.find(p=>p.id===currentProjectId); }
+function currencyPair(){
+  const proj = currentProject();
+  if(proj && Array.isArray(proj.currencyPair) && proj.currencyPair.length===2) return proj.currencyPair;
+  return ['RSD','EUR'];
+}
+function setCurrencyPair(curA, curB){
+  const proj = currentProject();
+  if(!proj) return;
+  proj.currencyPair = [curA, curB];
+  if(proj.displayCurrency && proj.displayCurrency!==curA && proj.displayCurrency!==curB){
+    proj.displayCurrency = null;
+  }
+  persistProjects();
+  closeModal();
+  render();
+}
+function usedCurrencies(){
+  // tacno dve valute po projektu - biras ih kao na menjacnici
+  return currencyPair().slice();
+}
+function displayCurrency(){
+  const proj = currentProject();
+  const used = usedCurrencies();
+  if(proj && proj.displayCurrency && used.includes(proj.displayCurrency)) return proj.displayCurrency;
+  return used[0];
+}
+function setDisplayCurrency(cur){
+  const proj = currentProject();
+  if(proj){ proj.displayCurrency = cur; persistProjects(); render(); }
+}
+function pairKey(a,b){ return [a,b].sort().join('_'); }
+function convert(amount, fromCur, toCur){
+  if(fromCur===toCur) return amount;
+  const key = pairKey(fromCur, toCur);
+  const rate = rates[key];
+  if(!rate) return null;
+  const [a] = key.split('_');
+  return fromCur===a ? amount*rate : amount/rate;
+}
+function getLastGlobalRates(){
+  const r = lsGet('app:lastRates');
+  return (r && r.value) ? JSON.parse(r.value) : {};
+}
+function saveLastGlobalRate(key, val){
+  const all = getLastGlobalRates();
+  all[key] = val;
+  lsSet('app:lastRates', JSON.stringify(all));
+}
+function setRate(curA, curB, val){
+  const v = parseFloat(val);
+  if(!isNaN(v) && v>0){
+    const key = pairKey(curA,curB);
+    rates[key]=v; persistRates();
+    saveLastGlobalRate(key, v);
+    closeModal(); render();
+  }
+}
+function knownCategories(){ return [...new Set(entries.map(e=>e.kategorija).filter(Boolean))]; }
+
+/* ---------- PROJECT ACTIONS ---------- */
+function switchProject(pid){
+  currentProjectId = pid; persistLastProject(); loadProjectData(pid);
+  const proj = projects.find(p=>p.id===pid);
+  const today = todayISO();
+  if(proj && proj.activeDate !== today){ proj.activeDate = today; persistProjects(); }
+  closeModal(); render();
+}
+function createProject(name, language){
+  const np = { id: uid('p'), name: name || t('default_project_name'), language: language||'auto', displayCurrency:null, activeDate: todayISO(), createdAt: Date.now() };
+  projects.push(np); persistProjects(); switchProject(np.id);
+}
+function deleteProject(pid){
+  const proj = projects.find(p=>p.id===pid);
+  if(proj){
+    const e = lsGet('entries:'+pid);
+    const r = lsGet('rates:'+pid);
+    lastDeleted = {
+      type: 'project',
+      project: JSON.parse(JSON.stringify(proj)),
+      entries: (e && e.value) ? JSON.parse(e.value) : [],
+      rates: (r && r.value) ? JSON.parse(r.value) : {}
+    };
+  }
+  projects = projects.filter(p=>p.id!==pid);
+  lsDelete('entries:'+pid);
+  lsDelete('rates:'+pid);
+  persistProjects();
+  if(projects.length===0){ createProject(null,'auto'); }
+  else if(currentProjectId===pid){ switchProject(projects[0].id); }
+  else { render(); }
+  if(proj) showUndoToast('Projekat "'+proj.name+'" obrisan.');
+}
+function setActiveDate(iso){
+  const proj = currentProject();
+  if(proj){ proj.activeDate = iso; persistProjects(); render(); }
+}
+
+/* ---------- ENTRY ACTIONS ---------- */
+
+
+function commitEntries(items){
+  const proj = currentProject();
+  items.forEach(it=>{
+    entries.push({
+      id: uid('e'), datum: it.datum || proj.activeDate || todayISO(),
+      opis: it.opis, iznos: it.iznos, valuta: it.valuta,
+      kategorija: it.kategorija || 'Ostalo', napomena: it.napomena || ''
+    });
+  });
+  persistEntries(); render();
+}
+function updateEntry(id, data){
+  const e = entries.find(x=>x.id===id); if(!e) return;
+  Object.assign(e, data); persistEntries(); render();
+}
+function deleteEntry(id){
+  const e = entries.find(x=>x.id===id);
+  if(e){ lastDeleted = { type:'entry', projectId: currentProjectId, entry: JSON.parse(JSON.stringify(e)) }; }
+  entries = entries.filter(x=>x.id!==id);
+  persistEntries(); render();
+  if(e) showUndoToast('Stavka "'+e.opis+'" obrisana.');
+}
+
+/* ---------- AI PARSING ---------- */
+async function callGeminiForExpenses(contentPart, isAudio){
+  const proj = currentProject();
+  const guessCur = entries.length>0 ? entries[entries.length-1].valuta : (displayCurrency() || 'RSD');
+  const known = usedCurrencies();
+  const knownCats = knownCategories();
+  const today = todayISO();
+  const audioNote = isAudio ? ' Ovo je audio zapis - prvo ga transkribuj u sebi (bilo koji jezik), zatim izvuci troškove iz izgovorenog.' : '';
+  const sys = `Danas: ${today}.${audioNote} Izvuci troškove (bilo koji jezik). Vrati SAMO JSON niz, bez markdown, bez ostalog teksta. Svaka stavka: {"opis":kratak opis original jezik, "iznos":broj, "valuta":ISO 3 slova (podrazumevano "${guessCur}" ako nije rečeno), "kategorija":1-2 reči (koristi tačno postojeću ako odgovara: ${knownCats.join(', ') || 'nema'}), "napomena":opciono, "datum":GGGG-MM-DD SAMO ako eksplicitno pomenut (izostavi polje ako nije)}. Više stavki/datuma = više objekata, svaki sa svojim tačnim datumom iz konteksta. Ne prevodi opis. Poznate valute: ${known.join(', ') || 'nema'}.`;
+
+  const apiKey = getApiKey();
+  if(!apiKey){ throw new Error('Nije unet Gemini API ključ. Idi u Podešavanja (⚙) i unesi ga.'); }
+
+  const resp = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key="+encodeURIComponent(apiKey), {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: sys }] },
+      contents: [{ role:"user", parts:[contentPart] }],
+      generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8000 }
+    })
+  });
+  if(!resp.ok){
+    const errBody = await resp.text();
+    throw new Error('Gemini API greška ('+resp.status+'): '+errBody.slice(0,200));
+  }
+  const data = await resp.json();
+
+  if(data.promptFeedback && data.promptFeedback.blockReason){
+    throw new Error('Gemini je blokirao odgovor: ' + data.promptFeedback.blockReason);
+  }
+  const candidate = data.candidates && data.candidates[0];
+  if(!candidate){
+    throw new Error('Gemini nije vratio nijedan rezultat. Sirov odgovor: ' + JSON.stringify(data).slice(0,300));
+  }
+  if(candidate.finishReason && candidate.finishReason !== 'STOP'){
+    throw new Error('Gemini je prekinuo odgovor (' + candidate.finishReason + '). Probaj kraću/jasniju rečenicu.');
+  }
+
+  const raw = (candidate.content && candidate.content.parts && candidate.content.parts[0] && candidate.content.parts[0].text) || '';
+  if(!raw.trim()){
+    throw new Error('Gemini je vratio prazan odgovor. Sirovo: ' + JSON.stringify(data).slice(0,300));
+  }
+  let items;
+  try{ items = JSON.parse(raw); }catch(e){ throw new Error('Ne mogu da protumačim odgovor kao JSON: ' + raw.slice(0,200)); }
+  if(!Array.isArray(items)) items = [items];
+  return items.filter(it=>it && it.opis).map(it=>({
+    opis: it.opis, iznos: parseFloat(it.iznos)||0,
+    valuta: (it.valuta||guessCur||'RSD').toUpperCase(),
+    kategorija: it.kategorija || 'Ostalo',
+    napomena: it.napomena||'', datum: it.datum || null
+  }));
+}
+
+async function parseWithAI(text){
+  return callGeminiForExpenses({ text: text }, false);
+}
+
+function findDuplicateEntry(item){
+  const proj = currentProject();
+  const datum = item.datum || (proj ? proj.activeDate : todayISO());
+  const opisNorm = (item.opis||'').trim().toLowerCase();
+  return entries.find(e =>
+    e.datum === datum &&
+    e.valuta === item.valuta &&
+    Math.abs(e.iznos - item.iznos) < 0.005 &&
+    e.opis.trim().toLowerCase() === opisNorm
+  );
+}
+async function handleIncomingText(text){
+  if(!text || !text.trim()) return;
+  isProcessing = true; render();
+  let items;
+  try{ items = await parseWithAI(text); }
+  catch(e){ isProcessing=false; render(); showBanner(e && e.message ? e.message : t('ai_processing_error')); return; }
+  isProcessing = false;
+  if(items.length===0){ render(); showBanner(t('ai_no_items_recognized')); return; }
+  if(items.length===1){
+    const dup = findDuplicateEntry(items[0]);
+    if(dup){
+      render();
+      showConfirmModal(
+        'Već postoji "'+dup.opis+' '+fmtNum(dup.iznos)+' '+dup.valuta+'" na '+dmFromISO(dup.datum)+'. Dodati ponovo, ili je ovo greška?',
+        ()=>{ startPendingSingle(items[0]); },
+        'Dodaj ipak', 'Otkaži', 'create-btn'
+      );
+      return;
+    }
+    startPendingSingle(items[0]);
+  } else {
+    startPendingBatch(items);
+  }
+}
+
+/* ---------- PENDING CONFIRM ---------- */
+function startPendingSingle(item){
+  clearInterval(pendingTimer); pendingItems=[item]; pendingPct=0; render();
+  const duration=5000, stepMs=50; let elapsed=0;
+  pendingTimer = setInterval(()=>{
+    elapsed+=stepMs; pendingPct=Math.min(100,(elapsed/duration)*100);
+    const ring=document.querySelector('.countdown'); if(ring) ring.style.setProperty('--pct',pendingPct+'%');
+    if(elapsed>=duration){ clearInterval(pendingTimer); confirmPending(); }
+  }, stepMs);
+}
+function startPendingBatch(items){ clearInterval(pendingTimer); pendingItems=items; pendingPct=-1; render(); }
+function refocusInput(){
+  const inp = document.getElementById('manualInput');
+  if(inp) inp.focus();
+}
+function cancelPending(){ clearInterval(pendingTimer); pendingItems=null; render(); refocusInput(); }
+function confirmPending(){
+  clearInterval(pendingTimer); if(!pendingItems) return;
+  const items=pendingItems; pendingItems=null; commitEntries(items);
+  refocusInput();
+}
+function editPendingField(idx, field, value){
+  if(!pendingItems) return;
+  if(field==='iznos') value = parseFloat(value)||0;
+  pendingItems[idx][field]=value;
+  if(pendingPct>=0 && pendingPct<100){ clearInterval(pendingTimer); pendingPct=100; }
+}
+function removeBatchItem(idx){
+  if(!pendingItems) return;
+  pendingItems.splice(idx,1);
+  if(pendingItems.length===0) pendingItems=null;
+  render();
+  refocusInput();
+}
+async function submitManualText(){
+  const inp=document.getElementById('manualInput');
+  const text=inp.value.trim();
+  if(!text) return;
+  inp.value='';
+  inp.focus();
+  await handleIncomingText(text);
+  const inp2 = document.getElementById('manualInput');
+  if(inp2) inp2.focus();
+}
+
+/* ---------- GROUPING ---------- */
+function groupByDate(){
+  const sorted=[...entries].sort((a,b)=>a.datum.localeCompare(b.datum));
+  const groups={}; sorted.forEach(e=>{ (groups[e.datum]=groups[e.datum]||[]).push(e); }); return groups;
+}
+function groupByCategory(){
+  const groups={};
+  entries.forEach(e=>{ const k=e.kategorija||'Ostalo'; (groups[k]=groups[k]||[]).push(e); });
+  return groups;
+}
+
+/* ---------- RENDER ---------- */
+function render(){
+  const app = document.getElementById('app');
+  const proj = currentProject() || {name:'—', activeDate: todayISO()};
+  const dispCur = displayCurrency();
+  const used = usedCurrencies();
+  const otherCurrencies = used.filter(c=>c!==dispCur);
+
+  const groups = viewMode==='datum' ? groupByDate() : groupByCategory();
+  const groupKeys = Object.keys(groups);
+  let grandTotal = entries.reduce((s,e)=>{ const c=convert(e.iznos,e.valuta,dispCur); return s+(c||0); },0);
+
+  const searchActive = searchOpen && searchQuery.trim().length>0;
+  const searchQ = searchQuery.trim().toLowerCase();
+
+  let listHtml = '';
+  if(groupKeys.length===0){
+    listHtml = '<div class="empty">'+t('empty_project')+'<br>'+t('empty_project_hint')+'</div>';
+  } else {
+    listHtml = groupKeys.map(key=>{
+      let items = groups[key];
+      if(searchActive){
+        items = items.filter(e =>
+          (e.opis && e.opis.toLowerCase().includes(searchQ)) ||
+          (e.kategorija && e.kategorija.toLowerCase().includes(searchQ)) ||
+          (e.napomena && e.napomena.toLowerCase().includes(searchQ))
+        );
+      }
+      if(searchActive && items.length===0) return '';
+      let groupTotal = 0;
+      const rows = items.map(e=>{
+        const conv = convert(e.iznos, e.valuta, dispCur);
+        if(conv!==null) groupTotal += conv;
+        let mainText, subText;
+        if(e.valuta === dispCur){
+          mainText = fmtNum(e.iznos)+' '+e.valuta;
+          subText = '';
+        } else if(conv !== null){
+          mainText = fmtNum(conv)+' '+dispCur;
+          subText = '= '+fmtNum(e.iznos)+' '+e.valuta;
+        } else {
+          mainText = fmtNum(e.iznos)+' '+e.valuta;
+          subText = t('exchange_rate_unknown');
+        }
+        const metaLine = viewMode==='datum' ? (e.kategorija||'') : dmFromISO(e.datum);
+        const extra = [metaLine, e.napomena].filter(Boolean).join(' · ');
+        return '<tr onclick="openEditEntry(\''+e.id+'\')">'+
+          '<td class="col-opis">'+escapeHtml(e.opis)+(extra?('<span class="meta">'+escapeHtml(extra)+'</span>'):'')+'</td>'+
+          '<td class="col-amt num">'+mainText+(subText?('<span class="sub num">'+subText+'</span>'):'')+'</td></tr>';
+      }).join('');
+      const label = viewMode==='datum' ? dmFromISO(key) : key;
+      return '<div class="group-block"><div class="group-head">'+escapeHtml(label)+'</div>'+
+        '<table class="entries-table"><tbody>'+rows+
+        '<tr class="total-row"><td>'+t('total')+'</td><td class="col-amt num">'+fmtNum(groupTotal)+' '+dispCur+'</td></tr>'+
+        '</tbody></table></div>';
+    }).join('');
+    if(searchActive && listHtml.trim()===''){
+      listHtml = '<div class="empty">'+t('no_search_results')+' "'+escapeHtml(searchQuery)+'".</div>';
+    }
+  }
+
+  const curToggleHtml = used.length>1 ? (
+    '<div class="cur-toggle">'+
+    used.map(c=>'<button class="'+(c===dispCur?'active':'')+'" onclick="setDisplayCurrency(\''+c+'\')">'+c+'</button>').join('')+
+    '</div>'
+  ) : '';
+
+  const rateBarHtml = otherCurrencies.length>0 ? (
+    '<div class="rate-row">'+
+    otherCurrencies.map(c=>
+      '<div class="rate-bar-compact" onclick="openRateModal(\''+c+'\',\''+dispCur+'\')">'+
+      '<span>1 '+c+'=<span class="val">'+(rates[pairKey(c,dispCur)] ? fmtNum(convert(1,c,dispCur)) : '?')+'</span>'+dispCur+'</span>'+
+      '<span>&#9998;</span></div>'
+    ).join('')+
+    curToggleHtml+
+    '<button onclick="openCurrencyPairModal()" title="Izaberi valute" style="flex:none;width:32px;height:32px;border-radius:9px;border:1px solid var(--line);background:var(--bg-card);color:var(--blue-deep);font-size:14px;cursor:pointer;">&#8646;</button>'+
+    '</div>'
+  ) : '';
+
+  let pendingHtml = '';
+  if(pendingItems){
+    if(pendingPct>=0){
+      const it = pendingItems[0];
+      pendingHtml = '<div class="pending-card">'+
+        '<div class="row">'+
+        '<input class="f-opis" value="'+escapeHtml(it.opis)+'" oninput="editPendingField(0,\'opis\',this.value)">'+
+        '<input class="f-iznos" type="number" step="0.01" value="'+it.iznos+'" oninput="editPendingField(0,\'iznos\',this.value)">'+
+        '<input class="f-valuta" value="'+it.valuta+'" oninput="editPendingField(0,\'valuta\',this.value.toUpperCase())">'+
+        '</div><div class="row">'+
+        '<input class="f-kat" value="'+escapeHtml(it.kategorija||'')+'" placeholder="'+t('category_placeholder')+'" oninput="editPendingField(0,\'kategorija\',this.value)">'+
+        '</div><div class="pending-actions">'+
+        '<div class="countdown" style="--pct:'+pendingPct+'%"></div>'+
+        '<button class="btn-cancel" onclick="cancelPending()">'+t('cancel')+'</button>'+
+        '<button class="btn-save" onclick="confirmPending()">'+t('save_now')+'</button>'+
+        '</div></div>';
+    } else {
+      pendingHtml = '<div class="pending-card">'+
+        '<div style="font-size:12.5px;color:var(--gold-deep);font-weight:700;margin-bottom:7px;">'+t('recognized_items')+' '+pendingItems.length+' '+t('review_and_save')+'</div>'+
+        pendingItems.map((it,idx)=>{
+          const dup = findDuplicateEntry(it);
+          const dupWarning = dup ? ('<div style="font-size:10.5px;color:var(--coral);font-weight:700;margin:-3px 0 6px;">⚠ '+t('duplicate_exists')+' "'+escapeHtml(dup.opis)+' '+fmtNum(dup.iznos)+' '+dup.valuta+'" '+t('on_date')+' '+dmFromISO(dup.datum)+' - '+t('possible_duplicate')+'</div>') : '';
+          return dupWarning +
+          '<div class="row">'+
+          '<input class="f-opis" value="'+escapeHtml(it.opis)+'" oninput="editPendingField('+idx+',\'opis\',this.value)">'+
+          '<input class="f-iznos" type="number" step="0.01" value="'+it.iznos+'" oninput="editPendingField('+idx+',\'iznos\',this.value)">'+
+          '<input class="f-valuta" value="'+it.valuta+'" oninput="editPendingField('+idx+',\'valuta\',this.value.toUpperCase())">'+
+          '<button class="batch-remove" onclick="removeBatchItem('+idx+')">✕</button></div>';
+        }).join('')+
+        '<div class="pending-actions">'+
+        '<button class="btn-cancel" onclick="cancelPending()">'+t('cancel_all')+'</button>'+
+        '<button class="btn-save" onclick="confirmPending()">'+t('save_all')+' ('+pendingItems.length+')</button>'+
+        '</div></div>';
+    }
+  }
+
+  app.innerHTML =
+    '<div class="topbar">'+
+    '<div class="tb-row">'+
+    '<div class="project-switch" style="flex:1;" onclick="openProjectSwitcher()">'+
+    '<span class="name">'+escapeHtml(proj.name)+'</span>'+
+    '<span class="proj-date-inline" onclick="event.stopPropagation(); openDateModal();">'+dmyFromISO(proj.activeDate)+'</span>'+
+    '<span class="chev">▾</span>'+
+    '</div>'+
+    '<button class="icon-btn" onclick="openNewProjectForm()" title="'+t('new_project')+'">➕</button>'+
+    '<button class="icon-btn" onclick="toggleSearch()" title="'+t('search')+'">'+(searchOpen?'✕':'🔍')+'</button>'+
+    '<button class="icon-btn" onclick="openProjectSettings()" title="'+t('settings')+'">⚙</button>'+
+    '</div>'+
+    (searchOpen ? '<div class="search-row"><input type="text" id="searchInput" value="'+escapeHtml(searchQuery)+'" placeholder="'+t('search_placeholder')+'" oninput="setSearchQuery(this.value)"><button class="search-close-btn" onclick="toggleSearch()">✕</button></div>' : '')+
+    '<div class="tb-row" style="margin-top:7px;">'+
+    '<div class="rate-row" style="width:100%;">'+rateBarHtml+'</div>'+
+    '</div>'+
+    '<div class="tb-row" style="margin-top:7px;">'+
+    '<div class="view-toggle tb-half">'+
+    '<button class="'+(viewMode==='datum'?'active':'')+'" onclick="setViewMode(\'datum\')">'+t('date')+'</button>'+
+    '<button class="'+(viewMode==='kategorija'?'active':'')+'" onclick="setViewMode(\'kategorija\')">'+t('category')+'</button>'+
+    '</div>'+
+    '<div class="tb-half">'+
+    (groupKeys.length>0 ? ('<div class="tr2-total"><span class="tr2-label">'+entries.length+' '+t('items_short')+'</span><span class="tr2-val num">'+fmtNum(grandTotal)+' '+(dispCur||'')+'</span></div>') : '')+
+    '</div></div>'+
+    '</div>'+
+    '<div class="list-area">'+listHtml+
+    '</div>'+
+    '<div class="bottom-bar">'+pendingHtml+
+    '<div class="entry-row"><div class="entry-input-wrap">'+
+    '<input type="text" id="manualInput" placeholder="'+t('manual_input_placeholder')+'" onkeydown="if(event.key===\'Enter\') submitManualText()">'+
+    '</div><button class="send-btn" '+(isProcessing?'disabled':'')+' onmousedown="event.preventDefault()" onclick="submitManualText()">'+(isProcessing?'<span class="spinner"></span>':'➤')+'</button></div></div>';
+}
+function setViewMode(m){ viewMode=m; render(); }
+
+/* ---------- MODAL: project switcher ---------- */
+let projectSearchQuery = '';
+let selectMode = false;
+let selectedProjectIds = new Set();
+let longPressTimer = null;
+let longPressFired = false;
+function renderProjectList(){
+  const q = projectSearchQuery.trim().toLowerCase();
+  const filtered = q ? projects.filter(p=>p.name.toLowerCase().includes(q)) : projects;
+  const list = document.getElementById('projListArea');
+  if(!list) return;
+  if(filtered.length===0){
+    list.innerHTML = '<div style="text-align:center; color:var(--text-dim); font-size:13.5px; padding:20px 0;">'+t('no_projects_found')+'</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(p=>{
+    const sel = selectedProjectIds.has(p.id);
+    const checkbox = selectMode ? ('<span style="width:21px;height:21px;border-radius:6px;border:2px solid '+(sel?'var(--blue-deep)':'var(--line)')+';background:'+(sel?'var(--blue-deep)':'transparent')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:800;flex:none;">'+(sel?'✓':'')+'</span>') : '';
+    const createdStr = p.createdAt ? dmyFromTimestamp(p.createdAt) : '';
+    return '<div class="proj-item '+(p.id===currentProjectId && !selectMode?'active':'')+'" onclick="handleProjectRowClick(\''+p.id+'\')" ontouchstart="startLongPress(\''+p.id+'\')" ontouchend="cancelLongPress()" ontouchmove="cancelLongPress()">'+checkbox+'<div style="display:flex; flex-direction:column; min-width:0;"><span class="pname">'+escapeHtml(p.name)+'</span>'+(createdStr?('<span style="font-size:10.5px; color:var(--text-dim); margin-top:2px;">'+t('created_on')+' '+createdStr+'</span>'):'')+'</div></div>';
+  }).join('');
+}
+function startLongPress(pid){
+  longPressFired = false;
+  clearTimeout(longPressTimer);
+  longPressTimer = setTimeout(()=>{
+    longPressFired = true;
+    if(!selectMode){ selectMode = true; selectedProjectIds = new Set(); }
+    if(selectedProjectIds.has(pid)) selectedProjectIds.delete(pid); else selectedProjectIds.add(pid);
+    renderProjectList();
+    renderProjectSelectionBar();
+    if(navigator.vibrate) navigator.vibrate(30);
+  }, 500);
+}
+function cancelLongPress(){ clearTimeout(longPressTimer); }
+function handleProjectRowClick(pid){
+  if(longPressFired){ longPressFired = false; return; }
+  if(selectMode){
+    if(selectedProjectIds.has(pid)) selectedProjectIds.delete(pid); else selectedProjectIds.add(pid);
+    renderProjectList();
+    renderProjectSelectionBar();
+    return;
+  }
+  switchProject(pid);
+}
+function exitSelectMode(){
+  selectMode = false; selectedProjectIds = new Set();
+  renderProjectList();
+  renderProjectSelectionBar();
+}
+function renderProjectSelectionBar(){
+  const bar = document.getElementById('projSelectBar');
+  if(!bar) return;
+  if(!selectMode){ bar.innerHTML = ''; return; }
+  const n = selectedProjectIds.size;
+  bar.innerHTML = '<div style="display:flex;align-items:center;gap:7px;background:var(--bg-card);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:10px;">'+
+    '<span style="flex:1;font-size:12.5px;font-weight:700;color:var(--blue-deep);">'+n+' '+t('selected')+'</span>'+
+    '<button onclick="exportSelectedProjects()" '+(n===0?'disabled':'')+' style="border:1px solid var(--blue-deep);background:#fff;color:var(--blue-deep);border-radius:8px;padding:6px 9px;font-size:11.5px;font-weight:700;cursor:pointer;">⬇ '+t('export_short')+'</button>'+
+    '<button onclick="confirmDeleteSelectedProjects()" '+(n===0?'disabled':'')+' style="border:1px solid var(--coral);background:var(--coral);color:#fff;border-radius:8px;padding:6px 9px;font-size:11.5px;font-weight:700;cursor:pointer;">🗑 '+t('delete_short')+'</button>'+
+    '<button onclick="exitSelectMode()" style="border:none;background:none;color:var(--text-dim);font-size:16px;padding:2px 4px;cursor:pointer;">✕</button>'+
+    '</div>';
+}
+function exportSelectedProjects(){
+  const ids = Array.from(selectedProjectIds);
+  if(ids.length===0) return;
+  const selProjects = projects.filter(p=>ids.includes(p.id));
+  const backup = { version:1, exportedAt: new Date().toISOString(), projects: selProjects, data: {} };
+  selProjects.forEach(p=>{
+    const e = lsGet('entries:'+p.id);
+    const r = lsGet('rates:'+p.id);
+    backup.data[p.id] = {
+      entries: (e && e.value) ? JSON.parse(e.value) : [],
+      rates: (r && r.value) ? JSON.parse(r.value) : {}
+    };
+  });
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'troskovi-izabrani-'+todayISO()+'.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  showBanner(t('exported_projects')+' '+ids.length+' '+t('projects_word')+'.', 'info');
+}
+function confirmDeleteSelectedProjects(){
+  const n = selectedProjectIds.size;
+  if(n===0) return;
+  showConfirmModal(t('confirm_delete_projects')+' '+n+' '+t('confirm_delete_projects_end'), ()=>{
+    const idsToDelete = Array.from(selectedProjectIds);
+    idsToDelete.forEach(pid=>{ lsDelete('entries:'+pid); lsDelete('rates:'+pid); });
+    const wasCurrentDeleted = idsToDelete.includes(currentProjectId);
+    projects = projects.filter(p=>!idsToDelete.includes(p.id));
+    persistProjects();
+    selectMode = false; selectedProjectIds = new Set();
+    if(projects.length===0){ createProject(null,'auto'); }
+    else if(wasCurrentDeleted){ switchProject(projects[0].id); }
+    else { renderProjectList(); renderProjectSelectionBar(); }
+    showBanner(n+' '+t('projects_deleted'), 'info');
+  }, t('default_yes_delete'), t('cancel'), 'delete-btn');
+}
+function filterProjectList(v){ projectSearchQuery = v; renderProjectList(); }
+function openProjectSwitcher(){
+  projectSearchQuery = '';
+  const backdrop=document.createElement('div'); backdrop.className='modal-backdrop'; backdrop.id='modalBackdrop';
+  backdrop.innerHTML = '<div class="modal" style="padding-top:0;">'+
+    '<div style="position:sticky; top:0; background:#fff; z-index:2; padding-top:20px; margin:0 -18px; padding-left:18px; padding-right:18px;">'+
+    '<button class="modal-close-x" onclick="closeModal()">✕</button><h2 style="margin-bottom:10px;">'+t('projects_title')+'</h2>'+
+    '<div class="field" style="margin-bottom:6px;"><input type="text" id="projSearchInput" placeholder="'+t('search_projects_placeholder')+'" oninput="filterProjectList(this.value)" style="width:100%; padding:11px 13px; border-radius:10px; border:1px solid var(--line); background:var(--bg-card); color:var(--text); font-size:14px;"></div>'+
+    '<div style="font-size:10.5px; color:var(--text-dim); margin-bottom:10px;">'+t('long_press_hint')+'</div>'+
+    '<div id="projSelectBar"></div>'+
+    '</div>'+
+    '<div id="projListArea" style="padding-top:4px;"></div>'+
+    '</div>';
+  appendModalBackdrop(backdrop);
+  backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
+  selectMode = false; selectedProjectIds = new Set();
+  renderProjectList();
+}
+function openNewProjectForm(){
+  const backdrop=document.createElement('div'); backdrop.className='modal-backdrop small-modal'; backdrop.id='modalBackdrop';
+  backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button><h2>'+t('new_project')+'</h2>'+
+    '<div class="field"><label>'+t('project_name')+'</label><input type="text" id="quickNewName" placeholder="'+t('new_project_placeholder')+'" maxlength="40" onkeydown="if(event.key===\'Enter\'){ event.preventDefault(); submitQuickNew(); }"></div>'+
+    '<div class="modal-actions"><button class="cancel-btn" onclick="closeModal()">'+t('cancel')+'</button><button class="create-btn" onclick="submitQuickNew()">'+t('create')+'</button></div></div>';
+  appendModalBackdrop(backdrop);
+  backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
+  setTimeout(()=>{ const el=document.getElementById('quickNewName'); if(el) el.focus(); }, 150);
+}
+function exportBackup(){
+  const backup = { version:1, exportedAt: new Date().toISOString(), projects: projects, data: {} };
+  projects.forEach(p=>{
+    const e = lsGet('entries:'+p.id);
+    const r = lsGet('rates:'+p.id);
+    backup.data[p.id] = {
+      entries: (e && e.value) ? JSON.parse(e.value) : [],
+      rates: (r && r.value) ? JSON.parse(r.value) : {}
+    };
+  });
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'troskovi-backup-'+todayISO()+'.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  showBanner(t('backup_downloaded'), 'info');
+}
+function triggerImportBackup(){
+  const inp = document.getElementById('backupFileInput');
+  if(!inp){ showBanner(t('import_field_missing')); return; }
+  try{
+    inp.click();
+  }catch(e){
+    showBanner(t('cannot_open_file_picker')+' ' + (e && e.message ? e.message : e));
+  }
+}
+function handleImportFile(fileInput){
+  const file = fileInput.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    let backup;
+    try{ backup = JSON.parse(e.target.result); }
+    catch(err){ showBanner(t('file_not_valid_json')); return; }
+    if(!backup || !Array.isArray(backup.projects)){ showBanner(t('file_not_valid_backup')); return; }
+    const count = backup.projects.length;
+    showConfirmModal(t('backup_will_replace')+' ('+count+' '+t('backup_will_replace_mid')+' '+(backup.exportedAt?backup.exportedAt.slice(0,10):t('backup_unknown_date'))+'). '+t('backup_current_lost'), ()=>{
+      applyBackup(backup);
+    });
+  };
+  reader.readAsText(file);
+  fileInput.value = '';
+}
+function applyBackup(backup){
+  projects = backup.projects;
+  persistProjects();
+  Object.keys(backup.data||{}).forEach(pid=>{
+    lsSet('entries:'+pid, JSON.stringify(backup.data[pid].entries||[]));
+    lsSet('rates:'+pid, JSON.stringify(backup.data[pid].rates||{}));
+  });
+  if(projects.length>0){
+    currentProjectId = projects[0].id;
+    persistLastProject();
+    loadProjectData(currentProjectId);
+  }
+  closeModal();
+  render();
+  showBanner(t('backup_imported_ok'), 'info');
+}
+function submitQuickNew(){
+  const name = document.getElementById('quickNewName').value.trim();
+  if(!name) return;
+  const lastLang = (currentProject() && currentProject().language) || 'auto';
+  closeModal();
+  createProject(name, lastLang);
+}
+function appendModalBackdrop(backdrop){
+  document.body.appendChild(backdrop);
+  document.body.style.overflow = 'hidden';
+  try{ history.pushState({modalOpen:true}, '', location.href); }catch(e){}
+}
+function releaseScrollLockIfNoModals(){
+  const anyOpen = document.getElementById('modalBackdrop') || document.getElementById('confirmBackdrop');
+  if(!anyOpen){ document.body.style.overflow = ''; }
+}
+function closeModal(){
+  const b=document.getElementById('modalBackdrop');
+  if(b) b.remove();
+  releaseScrollLockIfNoModals();
+}
+window.addEventListener('popstate', function(){
+  const m = document.getElementById('modalBackdrop'); if(m) m.remove();
+  const c = document.getElementById('confirmBackdrop'); if(c) c.remove();
+  if(searchOpen){ searchOpen = false; searchQuery=''; render(); }
+  releaseScrollLockIfNoModals();
+});
+let __confirmYesAction = null;
+function showConfirmModal(message, onYes, yesLabel, noLabel, yesClass){
+  __confirmYesAction = onYes;
+  yesLabel = yesLabel || t('default_yes_delete');
+  noLabel = noLabel || t('no');
+  yesClass = yesClass || 'delete-btn';
+  const backdrop=document.createElement('div'); backdrop.className='modal-backdrop small-modal'; backdrop.id='confirmBackdrop';
+  backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeConfirmModal()">✕</button><h2>'+t('confirm_title')+'</h2>'+
+    '<p style="font-size:14.5px; color:var(--text); line-height:1.5; margin:0 0 20px;">'+escapeHtml(message)+'</p>'+
+    '<div class="modal-actions">'+
+    '<button class="cancel-btn" onclick="closeConfirmModal()">'+escapeHtml(noLabel)+'</button>'+
+    '<button class="'+yesClass+'" onclick="runConfirmYes()">'+escapeHtml(yesLabel)+'</button>'+
+    '</div></div>';
+  appendModalBackdrop(backdrop);
+  backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeConfirmModal(); });
+}
+function closeConfirmModal(){
+  const b=document.getElementById('confirmBackdrop');
+  if(b) b.remove();
+  __confirmYesAction=null;
+  releaseScrollLockIfNoModals();
+}
+function runConfirmYes(){ const fn=__confirmYesAction; closeConfirmModal(); if(fn) fn(); }
+
+
+/* ---------- MODAL: project settings ---------- */
+function openProjectSettings(){
+  const proj = currentProject();
+  const backdrop=document.createElement('div'); backdrop.className='modal-backdrop'; backdrop.id='modalBackdrop';
+  backdrop.innerHTML = '<div class="modal">'+
+
+    '<button class="modal-close-x" onclick="closeModal()">✕</button><h2 style="margin:0 0 16px;">'+t('project_settings_title')+'</h2>'+
+
+    '<div class="settings-section">'+
+    '<div class="settings-section-label">'+t('section_basic')+'</div>'+
+    '<div class="settings-card">'+
+    '<div class="settings-field"><label>'+t('project_name')+'</label><input type="text" id="renameInput" value="'+escapeHtml(proj.name)+'" maxlength="40"></div>'+
+    '<div class="settings-field"><label>'+t('app_language')+'</label><select id="langSelect">'+LANGS.map(l=>'<option value="'+l.code+'" '+(l.code===proj.language?'selected':'')+'>'+l.label+'</option>').join('')+'</select></div>'+
+    '</div></div>'+
+
+    '<div class="modal-actions" style="margin-bottom:22px;"><button class="cancel-btn" onclick="closeModal()">'+t('cancel')+'</button><button class="create-btn" onclick="saveProjectSettings()">'+t('save')+'</button></div>'+
+
+    '<div class="settings-section">'+
+    '<div class="settings-section-label">'+t('section_data')+'</div>'+
+    '<div class="settings-card">'+
+    '<button class="settings-row" onclick="exportXlsx()"><span class="row-icon">⬇</span><span class="row-label">'+t('export_project_excel')+'</span><span class="chevron">›</span></button>'+
+    '<button class="settings-row" onclick="exportBackup()"><span class="row-icon">💾</span><span class="row-label">'+t('backup_export')+'</span><span class="chevron">›</span></button>'+
+    '<button class="settings-row" onclick="triggerImportBackup()"><span class="row-icon">📂</span><span class="row-label">'+t('backup_import')+'</span><span class="chevron">›</span></button>'+
+    '</div>'+
+    '<input type="file" id="backupFileInput" accept=".json" style="display:none" onchange="handleImportFile(this)">'+
+    '<div class="settings-hint">'+t('backup_hint')+'</div>'+
+    '</div>'+
+
+    '<div class="settings-section">'+
+    '<div class="settings-section-label">'+t('section_ai_key')+'</div>'+
+    '<div class="settings-card">'+
+    '<div class="settings-field"><label>'+t('gemini_key_label')+'</label><input type="password" id="apiKeyInput" value="'+escapeHtml(getApiKey())+'" placeholder="AIza..."></div>'+
+    '</div>'+
+    '<div style="display:flex; gap:8px; margin-top:8px;">'+
+    '<button class="create-btn" style="flex:1;" onclick="saveApiKey()">'+t('save_key')+'</button>'+
+    '<button class="delete-btn" style="flex:none; padding-left:16px; padding-right:16px;" onclick="confirmClearApiKey()">'+t('delete')+'</button>'+
+    '</div>'+
+    '<div class="settings-hint">'+t('key_hint')+'</div>'+
+    '</div>'+
+
+    '<div class="settings-section">'+
+    '<div class="settings-section-label">'+t('section_danger')+'</div>'+
+    '<div class="settings-card">'+
+    '<button class="settings-row settings-danger-row" onclick="confirmDeleteProject()"><span class="row-icon">🗑</span><span class="row-label">'+t('delete_project')+'</span><span class="chevron">›</span></button>'+
+    '</div></div>'+
+
+    '</div>';
+  appendModalBackdrop(backdrop);
+  backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
+}
+function saveApiKey(){
+  const key = document.getElementById('apiKeyInput').value.trim();
+  setApiKey(key);
+  showBanner(t('api_key_saved'), 'info');
+}
+function clearApiKey(){
+  setApiKey('');
+  const inp = document.getElementById('apiKeyInput');
+  if(inp) inp.value = '';
+  showBanner(t('api_key_deleted'), 'info');
+}
+function confirmClearApiKey(){
+  showConfirmModal(t('confirm_delete_api_key'), ()=>{ clearApiKey(); openProjectSettings(); });
+}
+function saveProjectSettings(){
+  const name=document.getElementById('renameInput').value.trim();
+  const lang=document.getElementById('langSelect').value;
+  const proj = currentProject();
+  if(proj){ proj.name=name||proj.name; proj.language=lang; persistProjects(); }
+  closeModal(); render();
+}
+function confirmDeleteProject(){
+  const proj = currentProject();
+  closeModal();
+  showConfirmModal(t('confirm_delete_project_full')+' "'+(proj?proj.name:'')+'" '+t('confirm_delete_project_full_end'), ()=>{ deleteProject(currentProjectId); });
+}
+
+/* ---------- MODAL: kurs ---------- */
+function openRateModal(curA, curB){
+  const key = pairKey(curA,curB);
+  const parts = key.split('_'); const a=parts[0], b=parts[1];
+  const lastGlobal = getLastGlobalRates();
+  const existing = rates[key] || lastGlobal[key] || '';
+  const backdrop=document.createElement('div'); backdrop.className='modal-backdrop small-modal'; backdrop.id='modalBackdrop';
+  backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button><h2>'+t('rate_title')+'</h2>'+
+    '<div class="field"><label>1 '+a+' = '+t('rate_how_much')+' '+b+'?</label><input type="number" step="0.01" id="rateInput" value="'+(existing||'')+'" placeholder="'+t('rate_placeholder')+'" autofocus onkeydown="if(event.key===\'Enter\'){ event.preventDefault(); setRate(\''+a+'\',\''+b+'\', this.value); }"></div>'+
+    '<div class="modal-actions"><button class="cancel-btn" onclick="closeModal()">'+t('cancel')+'</button><button class="create-btn" onclick="setRate(\''+a+'\',\''+b+'\', document.getElementById(\'rateInput\').value)">'+t('save')+'</button></div></div>';
+  appendModalBackdrop(backdrop);
+  backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
+  setTimeout(()=>{ const el=document.getElementById('rateInput'); if(el){ el.focus(); el.select(); } }, 100);
+}
+
+/* ---------- MODAL: izbor para valuta (kao menjacnica - bira se tacno dve) ---------- */
+const CURRENCY_OPTIONS = ['RSD','EUR','USD','GBP','CHF'];
+function openCurrencyPairModal(){
+  const pair = currencyPair();
+  const backdrop=document.createElement('div'); backdrop.className='modal-backdrop small-modal'; backdrop.id='modalBackdrop';
+  backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button><h2>'+t('currency_pair_title')+'</h2>'+
+    '<div class="field"><label>'+t('first_currency')+'</label><select id="curPickA">'+CURRENCY_OPTIONS.map(c=>'<option value="'+c+'" '+(c===pair[0]?'selected':'')+'>'+c+'</option>').join('')+'</select></div>'+
+    '<div class="field"><label>'+t('second_currency')+'</label><select id="curPickB">'+CURRENCY_OPTIONS.map(c=>'<option value="'+c+'" '+(c===pair[1]?'selected':'')+'>'+c+'</option>').join('')+'</select></div>'+
+    '<div class="modal-actions"><button class="cancel-btn" onclick="closeModal()">'+t('cancel')+'</button><button class="create-btn" onclick="submitCurrencyPair()">'+t('save')+'</button></div></div>';
+  appendModalBackdrop(backdrop);
+  backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
+}
+function submitCurrencyPair(){
+  const a = document.getElementById('curPickA').value;
+  const b = document.getElementById('curPickB').value;
+  if(a===b){ showBanner(t('choose_diff_currencies')); return; }
+  setCurrencyPair(a,b);
+}
+
+/* ---------- MODAL: aktivni datum ---------- */
+function openDateModal(){
+  const proj = currentProject();
+  const parts = proj.activeDate.split('-'); const y=parts[0], m=parts[1], d=parts[2];
+  const backdrop=document.createElement('div'); backdrop.className='modal-backdrop small-modal'; backdrop.id='modalBackdrop';
+  backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button><h2>'+t('date_modal_title')+'</h2><div class="date-trio">'+
+    '<input class="dd" type="number" id="dtD" value="'+parseInt(d)+'" min="1" max="31" placeholder="DD">'+
+    '<input class="mm" type="number" id="dtM" value="'+parseInt(m)+'" min="1" max="12" placeholder="MM">'+
+    '<input class="yy" type="number" id="dtY" value="'+y+'" min="2000" max="2100" placeholder="GGGG"></div>'+
+    '<div class="modal-actions" style="margin-top:16px;"><button class="cancel-btn" onclick="closeModal()">'+t('cancel')+'</button><button class="create-btn" onclick="saveDateModal()">'+t('save')+'</button></div></div>';
+  appendModalBackdrop(backdrop);
+  backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
+}
+function saveDateModal(){
+  const d=parseInt(document.getElementById('dtD').value)||1;
+  const m=parseInt(document.getElementById('dtM').value)||1;
+  const y=parseInt(document.getElementById('dtY').value)||new Date().getFullYear();
+  closeModal(); setActiveDate(isoFromParts(d,m,y));
+}
+
+/* ---------- MODAL: edit entry ---------- */
+function openEditEntry(id){
+  const e = entries.find(x=>x.id===id); if(!e) return;
+  const parts = e.datum.split('-'); const y=parts[0], m=parts[1], d=parts[2];
+  const backdrop=document.createElement('div'); backdrop.className='modal-backdrop'; backdrop.id='modalBackdrop';
+  backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button><h2>'+t('edit_entry_title')+'</h2>'+
+    '<div class="field"><label>'+t('date')+'</label><div class="date-trio">'+
+    '<input class="dd" type="number" id="eD" value="'+parseInt(d)+'" min="1" max="31">'+
+    '<input class="mm" type="number" id="eM" value="'+parseInt(m)+'" min="1" max="12">'+
+    '<input class="yy" type="number" id="eY" value="'+y+'" min="2000" max="2100"></div></div>'+
+    '<div class="field"><label>'+t('label_description')+'</label><input type="text" id="editOpis" value="'+escapeHtml(e.opis)+'"></div>'+
+    '<div class="field"><label>'+t('label_amount')+'</label><input type="number" step="0.01" id="editIznos" value="'+e.iznos+'"></div>'+
+    '<div class="field"><label>'+t('label_currency')+'</label><input type="text" id="editValuta" value="'+e.valuta+'" style="text-transform:uppercase;"></div>'+
+    '<div class="field"><label>'+t('category')+'</label><input type="text" id="editKategorija" value="'+escapeHtml(e.kategorija||'')+'"></div>'+
+    '<div class="field"><label>'+t('label_note')+'</label><input type="text" id="editNapomena" value="'+escapeHtml(e.napomena||'')+'"></div>'+
+    '<div class="modal-actions"><button class="delete-btn" onclick="deleteEntryFromModal(\''+id+'\')">'+t('delete')+'</button>'+
+    '<button class="create-btn" onclick="saveEntryFromModal(\''+id+'\')">'+t('save')+'</button></div></div>';
+  appendModalBackdrop(backdrop);
+  backdrop.addEventListener('click',(ev)=>{ if(ev.target===backdrop) closeModal(); });
+}
+function saveEntryFromModal(id){
+  const d=parseInt(document.getElementById('eD').value)||1;
+  const m=parseInt(document.getElementById('eM').value)||1;
+  const y=parseInt(document.getElementById('eY').value)||new Date().getFullYear();
+  const opis=document.getElementById('editOpis').value.trim();
+  const iznos=parseFloat(document.getElementById('editIznos').value)||0;
+  const valuta=document.getElementById('editValuta').value.trim().toUpperCase();
+  const kategorija=document.getElementById('editKategorija').value.trim()||'Ostalo';
+  const napomena=document.getElementById('editNapomena').value.trim();
+  closeModal();
+  updateEntry(id, {datum: isoFromParts(d,m,y), opis, iznos, valuta, kategorija, napomena});
+}
+function deleteEntryFromModal(id){
+  closeModal();
+  showConfirmModal(t('confirm_delete_entry'), ()=>{ deleteEntry(id); });
+}
+
+/* ---------- EXPORT ---------- */
+function exportXlsx(){
+  if(entries.length===0){ showBanner(t('no_items_to_export')); return; }
+  const proj = currentProject();
+  const dispCur = displayCurrency();
+  const groups = groupByDate();
+  const dates = Object.keys(groups);
+  const aoa = [];
+  aoa.push([proj.name]);
+  aoa.push([]);
+  aoa.push(['Datum','Opis','Kategorija','Iznos','Valuta','Iznos u '+dispCur,'Napomena']);
+  let grand = 0;
+  dates.forEach(date=>{
+    const items = groups[date];
+    let dayTotal = 0;
+    items.forEach(e=>{
+      const conv = convert(e.iznos, e.valuta, dispCur);
+      if(conv!==null) dayTotal += conv;
+      aoa.push([dmFromISO(e.datum), e.opis, e.kategorija||'', e.iznos, e.valuta, conv!==null?Math.round(conv*100)/100:'', e.napomena||'']);
+    });
+    aoa.push(['', 'Ukupno '+dmFromISO(date), '', '', '', Math.round(dayTotal*100)/100, '']);
+    aoa.push([]);
+    grand += dayTotal;
+  });
+  aoa.push(['', 'UKUPNO PROJEKAT', '', '', '', Math.round(grand*100)/100, '']);
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:8},{wch:30},{wch:14},{wch:10},{wch:8},{wch:14},{wch:28}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, proj.name.slice(0,28) || 'Troskovi');
+  const fname = (proj.name||'troskovi').replace(/[^\w]+/g,'_')+'_'+todayISO()+'.xlsx';
+  XLSX.writeFile(wb, fname);
+  showBanner('Excel fajl "'+fname+'" '+t('excel_downloading'), 'info');
+}
+
+loadAll();
+
+// Registracija service worker-a za rad bez interneta (offline)
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
