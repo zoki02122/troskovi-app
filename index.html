@@ -665,6 +665,7 @@ async function callGeminiForExpenses(contentPart, isAudio){
   const controller = new AbortController();
   const timeoutId = setTimeout(()=>controller.abort(), 20000);
   let resp;
+  const __t0 = performance.now();
   try{
     resp = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key="+encodeURIComponent(apiKey), {
       method:"POST",
@@ -684,6 +685,7 @@ async function callGeminiForExpenses(contentPart, isAudio){
   } finally {
     clearTimeout(timeoutId);
   }
+  window.__lastCallMs = Math.round(performance.now() - __t0);
   if(!resp.ok){
     const errBody = await resp.text();
     throw new Error('Gemini API greška ('+resp.status+'): '+errBody.slice(0,200));
@@ -739,6 +741,7 @@ async function handleIncomingText(text){
   try{ items = await parseWithAI(text); }
   catch(e){ isProcessing=false; render(); refocusInput(); showBanner(e && e.message ? e.message : t('ai_processing_error')); return; }
   isProcessing = false;
+  if(window.__lastCallMs){ showBanner('⏱ AI odgovor za '+window.__lastCallMs+' ms', 'info'); }
   if(items.length===0){ render(); refocusInput(); showBanner(t('ai_no_items_recognized')); return; }
   if(items.length===1){
     const dup = findDuplicateEntry(items[0]);
