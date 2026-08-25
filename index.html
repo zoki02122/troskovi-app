@@ -612,14 +612,18 @@ function setActiveDate(iso){
 
 function commitEntries(items){
   const proj = currentProject();
+  const newIds = [];
   items.forEach(it=>{
+    const id = uid('e');
     entries.push({
-      id: uid('e'), datum: it.datum || proj.activeDate || todayISO(),
+      id: id, datum: it.datum || proj.activeDate || todayISO(),
       opis: it.opis, iznos: it.iznos, valuta: it.valuta,
       kategorija: it.kategorija || 'Ostalo', napomena: it.napomena || ''
     });
+    newIds.push(id);
   });
   persistEntries(); render();
+  return newIds;
 }
 function updateEntry(id, data){
   const e = entries.find(x=>x.id===id); if(!e) return;
@@ -745,8 +749,21 @@ function refocusInput(){
 function cancelPending(){ clearInterval(pendingTimer); pendingItems=null; render(); refocusInput(); }
 function confirmPending(){
   clearInterval(pendingTimer); if(!pendingItems) return;
-  const items=pendingItems; pendingItems=null; commitEntries(items);
+  const items=pendingItems; pendingItems=null;
+  const newIds = commitEntries(items);
   refocusInput();
+  scrollToEntry(newIds[newIds.length-1]);
+}
+function scrollToEntry(id){
+  setTimeout(()=>{
+    const row = document.getElementById('entry-'+id);
+    if(!row) return;
+    const bottomBar = document.querySelector('.bottom-bar');
+    const bottomBarHeight = bottomBar ? bottomBar.offsetHeight : 0;
+    const rowRect = row.getBoundingClientRect();
+    const targetY = window.scrollY + rowRect.bottom - (window.innerHeight - bottomBarHeight) + 14;
+    window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
+  }, 80);
 }
 function editPendingField(idx, field, value){
   if(!pendingItems) return;
@@ -829,7 +846,7 @@ function render(){
         }
         const metaLine = viewMode==='datum' ? (e.kategorija||'') : dmFromISO(e.datum);
         const extra = [metaLine, e.napomena].filter(Boolean).join(' · ');
-        return '<tr onclick="openEditEntry(\''+e.id+'\')">'+
+        return '<tr id="entry-'+e.id+'" onclick="openEditEntry(\''+e.id+'\')">'+
           '<td class="col-opis">'+escapeHtml(e.opis)+(extra?('<span class="meta">'+escapeHtml(extra)+'</span>'):'')+'</td>'+
           '<td class="col-amt num">'+mainText+(subText?('<span class="sub num">'+subText+'</span>'):'')+'</td></tr>';
       }).join('');
