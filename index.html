@@ -741,7 +741,6 @@ async function handleIncomingText(text){
   try{ items = await parseWithAI(text); }
   catch(e){ isProcessing=false; render(); refocusInput(); showBanner(e && e.message ? e.message : t('ai_processing_error')); return; }
   isProcessing = false;
-  if(window.__lastCallMs){ showBanner('⏱ AI odgovor za '+window.__lastCallMs+' ms', 'info'); }
   if(items.length===0){ render(); refocusInput(); showBanner(t('ai_no_items_recognized')); return; }
   if(items.length===1){
     const dup = findDuplicateEntry(items[0]);
