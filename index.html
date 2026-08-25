@@ -571,7 +571,15 @@ function setRate(curA, curB, val){
     closeModal(); render();
   }
 }
-function knownCategories(){ return [...new Set(entries.map(e=>e.kategorija).filter(Boolean))]; }
+function knownCategories(){
+  const seen = new Set();
+  const result = [];
+  for(let i=entries.length-1; i>=0 && result.length<15; i--){
+    const k = entries[i].kategorija;
+    if(k && !seen.has(k)){ seen.add(k); result.push(k); }
+  }
+  return result;
+}
 
 /* ---------- PROJECT ACTIONS ---------- */
 function switchProject(pid){
@@ -726,11 +734,12 @@ function findDuplicateEntry(item){
 async function handleIncomingText(text){
   if(!text || !text.trim()) return;
   isProcessing = true; render();
+  refocusInput();
   let items;
   try{ items = await parseWithAI(text); }
-  catch(e){ isProcessing=false; render(); showBanner(e && e.message ? e.message : t('ai_processing_error')); return; }
+  catch(e){ isProcessing=false; render(); refocusInput(); showBanner(e && e.message ? e.message : t('ai_processing_error')); return; }
   isProcessing = false;
-  if(items.length===0){ render(); showBanner(t('ai_no_items_recognized')); return; }
+  if(items.length===0){ render(); refocusInput(); showBanner(t('ai_no_items_recognized')); return; }
   if(items.length===1){
     const dup = findDuplicateEntry(items[0]);
     if(dup){
