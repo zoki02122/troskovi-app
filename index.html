@@ -294,7 +294,9 @@ const I18N = {
     excel_downloading: 'se preuzima - proveri Preuzimanja na telefonu.',
     confirm_delete_project_full: 'Obrisati projekat',
     confirm_delete_project_full_end: 'i sve njegove troškove? Ovo ne može da se poništi.',
-    default_project_name: 'Novi projekat'
+    default_project_name: 'Novi projekat',
+    server_timeout: 'Server nije odgovorio na vreme (20 sekundi). Proveri internet i probaj ponovo.',
+    cannot_connect_ai: 'Ne mogu da se povežem sa AI servisom:'
   },
   'en-US': {
     empty_project: 'No expenses entered in this project yet.',
@@ -389,7 +391,9 @@ const I18N = {
     excel_downloading: 'is downloading - check Downloads on your phone.',
     confirm_delete_project_full: 'Delete project',
     confirm_delete_project_full_end: 'and all its expenses? This cannot be undone.',
-    default_project_name: 'New project'
+    default_project_name: 'New project',
+    server_timeout: 'The server didn\'t respond in time (20 seconds). Check your internet and try again.',
+    cannot_connect_ai: 'Could not connect to the AI service:'
   }
 };
 function t(key){
@@ -650,15 +654,28 @@ async function callGeminiForExpenses(contentPart, isAudio){
   const apiKey = getApiKey();
   if(!apiKey){ throw new Error('Nije unet Gemini API ključ. Idi u Podešavanja (⚙) i unesi ga.'); }
 
-  const resp = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key="+encodeURIComponent(apiKey), {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: sys }] },
-      contents: [{ role:"user", parts:[contentPart] }],
-      generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8000 }
-    })
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(()=>controller.abort(), 20000);
+  let resp;
+  try{
+    resp = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key="+encodeURIComponent(apiKey), {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: sys }] },
+        contents: [{ role:"user", parts:[contentPart] }],
+        generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8000 }
+      }),
+      signal: controller.signal
+    });
+  } catch(fetchErr){
+    if(fetchErr.name === 'AbortError'){
+      throw new Error(t('server_timeout'));
+    }
+    throw new Error(t('cannot_connect_ai') + ' ' + (fetchErr.message || fetchErr));
+  } finally {
+    clearTimeout(timeoutId);
+  }
   if(!resp.ok){
     const errBody = await resp.text();
     throw new Error('Gemini API greška ('+resp.status+'): '+errBody.slice(0,200));
