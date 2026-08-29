@@ -21,6 +21,7 @@
   html,body{ margin:0; padding:0; min-height:100%; background:var(--bg); color:var(--text);
     font-family:-apple-system,"Segoe UI",Roboto,sans-serif; overscroll-behavior:none; }
   .num{ font-variant-numeric:tabular-nums; }
+  .neg-amt{ color:var(--coral) !important; }
   #app{ max-width:560px; margin:0 auto; padding:0 0 128px; min-height:100vh; position:relative; }
 
   .topbar{ position:sticky; top:0; z-index:10; background:var(--bg); padding:12px 12px 6px; border-bottom:1px solid var(--line); }
@@ -411,6 +412,7 @@ function dmyFromTimestamp(ts){
 }
 function isoFromParts(d,m,y){ return y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
 function fmtNum(n){ return (Math.round(n*100)/100).toLocaleString('sr-RS',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtAmt(n){ const s=fmtNum(n); return n<0 ? '<span class="neg-amt">'+s+'</span>' : s; }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 let bannerTimeout = null;
 function showBanner(msg, type){
@@ -863,13 +865,13 @@ function render(){
         if(conv!==null) groupTotal += conv;
         let mainText, subText;
         if(e.valuta === dispCur){
-          mainText = fmtNum(e.iznos)+' '+e.valuta;
+          mainText = fmtAmt(e.iznos)+' '+e.valuta;
           subText = '';
         } else if(conv !== null){
-          mainText = fmtNum(conv)+' '+dispCur;
-          subText = '= '+fmtNum(e.iznos)+' '+e.valuta;
+          mainText = fmtAmt(conv)+' '+dispCur;
+          subText = '= '+fmtAmt(e.iznos)+' '+e.valuta;
         } else {
-          mainText = fmtNum(e.iznos)+' '+e.valuta;
+          mainText = fmtAmt(e.iznos)+' '+e.valuta;
           subText = t('exchange_rate_unknown');
         }
         const metaLine = viewMode==='datum' ? (e.kategorija||'') : dmFromISO(e.datum);
@@ -881,7 +883,7 @@ function render(){
       const label = viewMode==='datum' ? dmFromISO(key) : key;
       return '<div class="group-block"><div class="group-head">'+escapeHtml(label)+'</div>'+
         '<table class="entries-table"><tbody>'+rows+
-        '<tr class="total-row"><td>'+t('total')+'</td><td class="col-amt num">'+fmtNum(groupTotal)+' '+dispCur+'</td></tr>'+
+        '<tr class="total-row"><td>'+t('total')+'</td><td class="col-amt num">'+fmtAmt(groupTotal)+' '+dispCur+'</td></tr>'+
         '</tbody></table></div>';
     }).join('');
     if(searchActive && listHtml.trim()===''){
@@ -965,7 +967,7 @@ function render(){
     '<button class="'+(viewMode==='kategorija'?'active':'')+'" onclick="setViewMode(\'kategorija\')">'+t('category')+'</button>'+
     '</div>'+
     '<div class="tb-half">'+
-    (groupKeys.length>0 ? ('<div class="tr2-total"><span class="tr2-label">'+entries.length+' '+t('items_short')+'</span><span class="tr2-val num">'+fmtNum(grandTotal)+' '+(dispCur||'')+'</span></div>') : '')+
+    (groupKeys.length>0 ? ('<div class="tr2-total"><span class="tr2-label">'+entries.length+' '+t('items_short')+'</span><span class="tr2-val num">'+fmtAmt(grandTotal)+' '+(dispCur||'')+'</span></div>') : '')+
     '</div></div>'+
     '</div>'+
     '<div class="list-area">'+listHtml+
