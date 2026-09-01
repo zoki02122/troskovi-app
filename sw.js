@@ -1,4 +1,4 @@
-const CACHE_NAME = 'troskovi-cache-v3';
+const CACHE_NAME = 'troskovi-cache-v4';
 const FILES_TO_CACHE = [
   './index.html',
   './manifest.json',
@@ -22,23 +22,8 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Mrežni odgovor ako ima interneta (da se AI pozivi i osvezenja normalno provuku),
-// a ako nema veze, koristi sacuvanu kopiju iz kesa (offline rad).
 self.addEventListener('fetch', (event) => {
-  if(event.request.method !== 'GET') return;
-
-  // AI/API pozivi (Google Gemini) uvek idu direktno na mrezu, nikad iz kesa
-  if(event.request.url.includes('generativelanguage.googleapis.com')){
-    return;
-  }
-
   event.respondWith(
-    fetch(event.request, { cache: 'no-store' })
-      .then((resp) => {
-        const respClone = resp.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, respClone));
-        return resp;
-      })
-      .catch(() => caches.match(event.request))
+    fetch(event.request, {cache:'no-store'}).catch(() => caches.match(event.request))
   );
 });
