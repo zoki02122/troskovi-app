@@ -1176,7 +1176,7 @@ function openNewProjectForm(){
   setTimeout(()=>{ const el=document.getElementById('quickNewName'); if(el) el.focus(); }, 150);
 }
 function openAttachMenu(){
-  const backdrop=document.createElement('div'); backdrop.className='modal-backdrop small-modal'; backdrop.id='modalBackdrop';
+  const backdrop=document.createElement('div'); backdrop.className='modal-backdrop'; backdrop.id='modalBackdrop';
   backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button><h2 style="margin-bottom:4px;">'+t('attach_photo')+'</h2>'+
     '<div class="attach-options">'+
     '<button class="attach-opt" onclick="triggerPhotoInput(\'camera\')"><span class="attach-icon">📷</span><span>'+t('attach_camera')+'</span></button>'+
