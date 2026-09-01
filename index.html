@@ -34,16 +34,17 @@
   .project-switch .chev{ color:var(--text-dim); font-size:12px; margin-left:auto; flex:none; }
   .icon-btn{ width:36px; height:36px; border-radius:10px; background:var(--bg-card); border:1px solid var(--line); color:var(--blue-deep); font-size:14px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none; }
 
-  .view-toggle{ display:flex; gap:3px; background:var(--bg-card); border-radius:9px; padding:2px; border:1px solid var(--line); width:100%; }
-  .view-toggle button{ flex:1; border:none; background:transparent; padding:8px 7px; font-size:11px; font-weight:700; color:var(--text-dim); border-radius:7px; cursor:pointer; }
+  .view-toggle{ display:flex; gap:3px; background:var(--bg-card); border-radius:9px; padding:2px; border:1px solid var(--line); width:100%; height:36px; }
+  .view-toggle button{ flex:1; border:none; background:transparent; padding:0 4px; font-size:10px; font-weight:700; color:var(--text-dim); border-radius:7px; cursor:pointer; }
   .view-toggle button.active{ background:var(--blue-deep); color:#fff; }
-  .cur-toggle{ display:flex; gap:3px; background:var(--bg-card); border-radius:9px; padding:2px; border:1px solid var(--line); flex:none; }
-  .cur-toggle button{ border:none; background:transparent; padding:5px 7px; font-size:10px; font-weight:700; color:var(--text-dim); border-radius:6px; cursor:pointer; }
+  .cur-toggle{ display:flex; gap:3px; background:var(--bg-card); border-radius:9px; padding:2px; border:1px solid var(--line); flex:none; height:36px; }
+  .cur-toggle button{ border:none; background:transparent; padding:0 7px; font-size:10px; font-weight:700; color:var(--text-dim); border-radius:6px; cursor:pointer; }
   .cur-toggle button.active{ background:var(--gold); color:#fff; }
 
   .rate-row{ display:flex; align-items:center; gap:6px; width:100%; }
-  .rate-bar-compact{ flex:1; min-width:0; background:#FFF8E8; border:1px solid #EBD9A8; border-radius:10px; padding:7px 9px; font-size:10.5px; color:var(--gold-deep); font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .rate-bar-compact .val{ font-weight:800; }
+  .rate-icon-btn{ width:36px; height:36px; border-radius:10px; border:1px solid var(--gold-deep); background:#FFF3D6; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; flex:none; line-height:1.15; gap:0; padding:0 2px; text-align:center; }
+  .rate-icon-btn .ri-ic{ font-size:8px; color:var(--gold-deep); font-weight:700; }
+  .rate-icon-btn .ri-val{ font-size:12px; font-weight:800; color:var(--gold-deep); }
   .tr2-total{ width:100%; text-align:right; background:var(--blue-deep); border-radius:10px; padding:7px 12px; }
   .tr2-total .tr2-label{ display:block; font-size:8.5px; color:#DCE6F2; text-transform:uppercase; letter-spacing:0.3px; }
   .tr2-total .tr2-val{ display:block; font-size:16px; font-weight:800; color:#F5C15C; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -313,7 +314,10 @@ const I18N = {
     attach_gallery: 'Galerija',
     attach_files: 'Dokumenti',
     photo_selected: 'Izabrana slika',
-    remove_photo: 'Ukloni'
+    remove_photo: 'Ukloni',
+    view_by_name: 'Naziv',
+    category_short: 'Kat.',
+    no_description_group: '(bez naziva)'
   },
   'en-US': {
     empty_project: 'No expenses entered in this project yet.',
@@ -416,7 +420,10 @@ const I18N = {
     attach_gallery: 'Gallery',
     attach_files: 'Files',
     photo_selected: 'Photo selected',
-    remove_photo: 'Remove'
+    remove_photo: 'Remove',
+    view_by_name: 'Name',
+    category_short: 'Cat.',
+    no_description_group: '(no description)'
   }
 };
 function t(key){
@@ -893,6 +900,11 @@ function groupByCategory(){
   entries.forEach(e=>{ const k=e.kategorija||'Ostalo'; (groups[k]=groups[k]||[]).push(e); });
   return groups;
 }
+function groupByName(){
+  const groups={};
+  entries.forEach(e=>{ const k=(e.opis||'').trim() || t('no_description_group'); (groups[k]=groups[k]||[]).push(e); });
+  return groups;
+}
 
 /* ---------- RENDER ---------- */
 function render(){
@@ -902,7 +914,7 @@ function render(){
   const used = usedCurrencies();
   const otherCurrencies = used.filter(c=>c!==dispCur);
 
-  const groups = viewMode==='datum' ? groupByDate() : groupByCategory();
+  const groups = viewMode==='datum' ? groupByDate() : (viewMode==='kategorija' ? groupByCategory() : groupByName());
   const groupKeys = Object.keys(groups);
   let grandTotal = entries.reduce((s,e)=>{ const c=convert(e.iznos,e.valuta,dispCur); return s+(c||0); },0);
 
@@ -938,7 +950,10 @@ function render(){
           mainText = fmtAmt(e.iznos)+' '+e.valuta;
           subText = t('exchange_rate_unknown');
         }
-        const metaLine = viewMode==='datum' ? (e.kategorija||'') : dmFromISO(e.datum);
+        let metaLine;
+        if(viewMode==='datum') metaLine = e.kategorija||'';
+        else if(viewMode==='kategorija') metaLine = dmFromISO(e.datum);
+        else metaLine = [dmFromISO(e.datum), e.kategorija].filter(Boolean).join(' · ');
         const extra = [metaLine, e.napomena].filter(Boolean).join(' · ');
         return '<tr id="entry-'+e.id+'" onclick="openEditEntry(\''+e.id+'\')">'+
           '<td class="col-opis">'+escapeHtml(e.opis)+(extra?('<span class="meta">'+escapeHtml(extra)+'</span>'):'')+'</td>'+
@@ -962,15 +977,13 @@ function render(){
   ) : '';
 
   const rateBarHtml = otherCurrencies.length>0 ? (
-    '<div class="rate-row">'+
     otherCurrencies.map(c=>
-      '<div class="rate-bar-compact" onclick="openRateModal(\''+c+'\',\''+dispCur+'\')">'+
-      '<span>1 '+c+'=<span class="val">'+(rates[pairKey(c,dispCur)] ? fmtNum(convert(1,c,dispCur)) : '?')+'</span>'+dispCur+'</span>'+
-      '<span>&#9998;</span></div>'
+      '<div class="rate-icon-btn" onclick="openRateModal(\''+c+'\',\''+dispCur+'\')" title="1 '+c+' = '+(rates[pairKey(c,dispCur)] ? fmtNum(convert(1,c,dispCur)) : '?')+' '+dispCur+'">'+
+      '<span class="ri-ic">'+c+'</span>'+
+      '<span class="ri-val">'+(rates[pairKey(c,dispCur)] ? Math.round(convert(1,c,dispCur)) : '?')+'</span></div>'
     ).join('')+
     curToggleHtml+
-    '<button onclick="openCurrencyPairModal()" title="Izaberi valute" style="flex:none;width:32px;height:32px;border-radius:9px;border:1px solid var(--line);background:var(--bg-card);color:var(--blue-deep);font-size:14px;cursor:pointer;">&#8646;</button>'+
-    '</div>'
+    '<button class="icon-btn" onclick="openCurrencyPairModal()" title="Izaberi valute" style="font-size:14px;">&#8646;</button>'
   ) : '';
 
   let pendingHtml = '';
@@ -1023,16 +1036,15 @@ function render(){
     '</div>'+
     (searchOpen ? '<div class="search-row"><input type="text" id="searchInput" value="'+escapeHtml(searchQuery)+'" placeholder="'+t('search_placeholder')+'" oninput="setSearchQuery(this.value)"><button class="search-close-btn" onclick="toggleSearch()">✕</button></div>' : '')+
     '<div class="tb-row" style="margin-top:7px;">'+
-    '<div class="rate-row" style="width:100%;">'+rateBarHtml+'</div>'+
-    '</div>'+
-    '<div class="tb-row" style="margin-top:7px;">'+
-    '<div class="view-toggle tb-half">'+
+    '<div class="rate-row">'+rateBarHtml+
+    '<div class="view-toggle" style="flex:1;">'+
     '<button class="'+(viewMode==='datum'?'active':'')+'" onclick="setViewMode(\'datum\')">'+t('date')+'</button>'+
-    '<button class="'+(viewMode==='kategorija'?'active':'')+'" onclick="setViewMode(\'kategorija\')">'+t('category')+'</button>'+
-    '</div>'+
-    '<div class="tb-half">'+
+    '<button class="'+(viewMode==='kategorija'?'active':'')+'" onclick="setViewMode(\'kategorija\')">'+t('category_short')+'</button>'+
+    '<button class="'+(viewMode==='naziv'?'active':'')+'" onclick="setViewMode(\'naziv\')">'+t('view_by_name')+'</button>'+
+    '</div></div></div>'+
+    '<div class="tb-row" style="margin-top:7px;">'+
     (groupKeys.length>0 ? ('<div class="tr2-total"><span class="tr2-label">'+entries.length+' '+t('items_short')+'</span><span class="tr2-val num">'+fmtAmt(grandTotal)+' '+(dispCur||'')+'</span></div>') : '')+
-    '</div></div>'+
+    '</div>'+
     '</div>'+
     '<div class="list-area">'+listHtml+
     '</div>'+
