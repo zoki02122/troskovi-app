@@ -90,6 +90,15 @@
 
   .bottom-bar{ position:fixed; bottom:0; left:0; right:0; max-width:560px; margin:0 auto; padding:8px 10px calc(8px + env(safe-area-inset-bottom)); background:#fff; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:6px; }
   .entry-row{ display:flex; gap:7px; align-items:center; }
+  .plus-btn{ width:44px; height:44px; border-radius:50%; border:1px solid var(--line); background:var(--bg-card); color:var(--blue-deep); font-size:22px; font-weight:600; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none; line-height:1; }
+  .attach-options{ display:flex; gap:10px; justify-content:space-around; margin-top:6px; }
+  .attach-opt{ display:flex; flex-direction:column; align-items:center; gap:8px; background:none; border:none; cursor:pointer; flex:1; padding:10px 4px; }
+  .attach-opt .attach-icon{ width:56px; height:56px; border-radius:50%; background:var(--bg-card); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:24px; }
+  .attach-opt span{ font-size:12.5px; color:var(--text); font-weight:600; }
+  .photo-preview-row{ display:flex; align-items:center; gap:10px; background:var(--bg-card); border:1px solid var(--line); border-radius:14px; padding:8px 10px; margin-bottom:8px; }
+  .photo-preview-row img{ width:46px; height:46px; object-fit:cover; border-radius:8px; flex:none; }
+  .photo-preview-row .pp-name{ flex:1; font-size:12.5px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .photo-preview-row .pp-remove{ background:none; border:none; color:var(--coral); font-size:14px; font-weight:700; cursor:pointer; flex:none; padding:4px 6px; }
   .entry-input-wrap{ flex:1; position:relative; display:flex; align-items:center; background:var(--bg-card); border:1px solid var(--line); border-radius:24px; padding:4px 4px 4px 15px; }
   .entry-input-wrap input{ flex:1; border:none; background:transparent; padding:9px 6px; font-size:14.5px; color:var(--text); font-family:inherit; }
   .entry-input-wrap input::placeholder{ color:var(--text-dim); }
@@ -188,6 +197,7 @@ let pendingItems = null;
 let pendingTimer = null;
 let pendingPct = 0;
 let isProcessing = false;
+let selectedPhoto = null; // { name, dataUrl } - Korak 1: samo prikaz, jos se ne salje AI-ju
 const LANGS = [
   {code:'auto', label:'Automatski (jezik telefona)'},
   {code:'sr-RS', label:'Srpski'},{code:'en-US', label:'Engleski'}
@@ -297,7 +307,13 @@ const I18N = {
     confirm_delete_project_full_end: 'i sve njegove troškove? Ovo ne može da se poništi.',
     default_project_name: 'Novi projekat',
     server_timeout: 'Server nije odgovorio na vreme (20 sekundi). Proveri internet i probaj ponovo.',
-    cannot_connect_ai: 'Ne mogu da se povežem sa AI servisom:'
+    cannot_connect_ai: 'Ne mogu da se povežem sa AI servisom:',
+    attach_photo: 'Dodaj fotografiju računa',
+    attach_camera: 'Kamera',
+    attach_gallery: 'Galerija',
+    attach_files: 'Dokumenti',
+    photo_selected: 'Izabrana slika',
+    remove_photo: 'Ukloni'
   },
   'en-US': {
     empty_project: 'No expenses entered in this project yet.',
@@ -394,7 +410,13 @@ const I18N = {
     confirm_delete_project_full_end: 'and all its expenses? This cannot be undone.',
     default_project_name: 'New project',
     server_timeout: 'The server didn\'t respond in time (20 seconds). Check your internet and try again.',
-    cannot_connect_ai: 'Could not connect to the AI service:'
+    cannot_connect_ai: 'Could not connect to the AI service:',
+    attach_photo: 'Add receipt photo',
+    attach_camera: 'Camera',
+    attach_gallery: 'Gallery',
+    attach_files: 'Files',
+    photo_selected: 'Photo selected',
+    remove_photo: 'Remove'
   }
 };
 function t(key){
@@ -652,14 +674,15 @@ function deleteEntry(id){
 }
 
 /* ---------- AI PARSING ---------- */
-async function callGeminiForExpenses(contentPart, isAudio){
+async function callGeminiForExpenses(contentPart, isAudio, isImage){
   const proj = currentProject();
   const guessCur = entries.length>0 ? entries[entries.length-1].valuta : (displayCurrency() || 'RSD');
   const known = usedCurrencies();
   const knownCats = knownCategories();
   const today = todayISO();
   const audioNote = isAudio ? ' Ovo je audio zapis - prvo ga transkribuj u sebi (bilo koji jezik), zatim izvuci troškove iz izgovorenog.' : '';
-  const sys = `Danas: ${today}.${audioNote} Izvuci troškove (bilo koji jezik). Vrati SAMO JSON niz, bez markdown, bez ostalog teksta. Svaka stavka: {"opis":kratak opis original jezik, "iznos":broj, "valuta":ISO 3 slova (podrazumevano "${guessCur}" ako nije rečeno), "kategorija":1-2 reči (koristi tačno postojeću ako odgovara: ${knownCats.join(', ') || 'nema'}), "napomena":opciono, "datum":GGGG-MM-DD SAMO ako eksplicitno pomenut (izostavi polje ako nije)}. Više stavki/datuma = više objekata, svaki sa svojim tačnim datumom iz konteksta. Ne prevodi opis. Poznate valute: ${known.join(', ') || 'nema'}.`;
+  const imageNote = isImage ? ' Ovo je fotografija računa/priznanice. Pročitaj sve stavke sa slike (svaki artikal/uslugu kao posebnu stavku ako je jasno razdvojeno, ili ukupan iznos računa kao jednu stavku ako pojedinačne stavke nisu čitljive). Ako na računu piše naziv prodavnice, koristi ga kao deo opisa. Datum na računu koristi kao "datum" polje ako je čitljiv.' : '';
+  const sys = `Danas: ${today}.${audioNote}${imageNote} Izvuci troškove (bilo koji jezik). Vrati SAMO JSON niz, bez markdown, bez ostalog teksta. Svaka stavka: {"opis":kratak opis original jezik, "iznos":broj, "valuta":ISO 3 slova (podrazumevano "${guessCur}" ako nije rečeno), "kategorija":1-2 reči (koristi tačno postojeću ako odgovara: ${knownCats.join(', ') || 'nema'}), "napomena":opciono, "datum":GGGG-MM-DD SAMO ako eksplicitno pomenut (izostavi polje ako nije)}. Više stavki/datuma = više objekata, svaki sa svojim tačnim datumom iz konteksta. Ne prevodi opis. Poznate valute: ${known.join(', ') || 'nema'}.`;
 
   const apiKey = getApiKey();
   if(!apiKey){ throw new Error('Nije unet Gemini API ključ. Idi u Podešavanja (⚙) i unesi ga.'); }
@@ -668,13 +691,14 @@ async function callGeminiForExpenses(contentPart, isAudio){
   const timeoutId = setTimeout(()=>controller.abort(), 20000);
   let resp;
   const __t0 = performance.now();
+  const parts = Array.isArray(contentPart) ? contentPart : [contentPart];
   try{
     resp = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key="+encodeURIComponent(apiKey), {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: sys }] },
-        contents: [{ role:"user", parts:[contentPart] }],
+        contents: [{ role:"user", parts: parts }],
         generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8000 }
       }),
       signal: controller.signal
@@ -723,6 +747,15 @@ async function callGeminiForExpenses(contentPart, isAudio){
 async function parseWithAI(text){
   return callGeminiForExpenses({ text: text }, false);
 }
+async function parseImageWithAI(dataUrl, caption){
+  const match = /^data:([^;]+);base64,(.*)$/s.exec(dataUrl);
+  if(!match) throw new Error('Neispravan format slike.');
+  const mimeType = match[1];
+  const base64Data = match[2];
+  const parts = [{ inlineData: { mimeType: mimeType, data: base64Data } }];
+  if(caption && caption.trim()) parts.push({ text: caption.trim() });
+  return callGeminiForExpenses(parts, false, true);
+}
 
 function findDuplicateEntry(item){
   const proj = currentProject();
@@ -735,12 +768,11 @@ function findDuplicateEntry(item){
     e.opis.trim().toLowerCase() === opisNorm
   );
 }
-async function handleIncomingText(text){
-  if(!text || !text.trim()) return;
+async function handleIncomingItems(parseFn){
   isProcessing = true; render();
   refocusInput();
   let items;
-  try{ items = await parseWithAI(text); }
+  try{ items = await parseFn(); }
   catch(e){ isProcessing=false; render(); refocusInput(); showBanner(e && e.message ? e.message : t('ai_processing_error')); return; }
   isProcessing = false;
   if(items.length===0){ render(); refocusInput(); showBanner(t('ai_no_items_recognized')); return; }
@@ -757,8 +789,34 @@ async function handleIncomingText(text){
     }
     startPendingSingle(items[0]);
   } else {
+    const dupCount = items.filter(it=>findDuplicateEntry(it)).length;
+    if(dupCount>0){
+      render();
+      const msg = dupCount===items.length
+        ? ('Svih '+dupCount+' prepoznatih stavki već postoji u projektu (obeleženo ispod). Dodati ih ipak, ili je ovo greška?')
+        : (dupCount+' od '+items.length+' prepoznatih stavki već postoji u projektu (obeleženo crveno ispod). Dodati sve ipak, ili je ovo greška?');
+      showConfirmModal(
+        msg,
+        ()=>{ startPendingBatch(items); },
+        'Dodaj ipak', 'Otkaži', 'create-btn'
+      );
+      return;
+    }
     startPendingBatch(items);
   }
+}
+async function handleIncomingText(text){
+  if(!text || !text.trim()) return;
+  await handleIncomingItems(()=>parseWithAI(text));
+}
+async function handleIncomingImage(){
+  if(!selectedPhoto) return;
+  const photo = selectedPhoto;
+  const captionInp = document.getElementById('manualInput');
+  const caption = captionInp ? captionInp.value : '';
+  selectedPhoto = null;
+  if(captionInp) captionInp.value = '';
+  await handleIncomingItems(()=>parseImageWithAI(photo.dataUrl, caption));
 }
 
 /* ---------- PENDING CONFIRM ---------- */
@@ -809,6 +867,12 @@ function removeBatchItem(idx){
   refocusInput();
 }
 async function submitManualText(){
+  if(selectedPhoto){
+    await handleIncomingImage();
+    const inp2 = document.getElementById('manualInput');
+    if(inp2) inp2.focus();
+    return;
+  }
   const inp=document.getElementById('manualInput');
   const text=inp.value.trim();
   if(!text) return;
@@ -973,7 +1037,10 @@ function render(){
     '<div class="list-area">'+listHtml+
     '</div>'+
     '<div class="bottom-bar">'+pendingHtml+
-    '<div class="entry-row"><div class="entry-input-wrap">'+
+    (selectedPhoto ? ('<div class="photo-preview-row"><img src="'+selectedPhoto.dataUrl+'"><span class="pp-name">'+t('photo_selected')+': '+escapeHtml(selectedPhoto.name)+'</span><button class="pp-remove" onclick="clearSelectedPhoto()">✕ '+t('remove_photo')+'</button></div>') : '')+
+    '<div class="entry-row">'+
+    '<button class="plus-btn" onclick="openAttachMenu()" title="'+t('attach_photo')+'">+</button>'+
+    '<div class="entry-input-wrap">'+
     '<input type="text" id="manualInput" placeholder="'+t('manual_input_placeholder')+'" onkeydown="if(event.key===\'Enter\') submitManualText()">'+
     '</div><button class="send-btn" '+(isProcessing?'disabled':'')+' onmousedown="event.preventDefault()" onclick="submitManualText()">'+(isProcessing?'<span class="spinner"></span>':'➤')+'</button></div></div>';
 }
@@ -1107,6 +1174,41 @@ function openNewProjectForm(){
   appendModalBackdrop(backdrop);
   backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
   setTimeout(()=>{ const el=document.getElementById('quickNewName'); if(el) el.focus(); }, 150);
+}
+function openAttachMenu(){
+  const backdrop=document.createElement('div'); backdrop.className='modal-backdrop small-modal'; backdrop.id='modalBackdrop';
+  backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button><h2 style="margin-bottom:4px;">'+t('attach_photo')+'</h2>'+
+    '<div class="attach-options">'+
+    '<button class="attach-opt" onclick="triggerPhotoInput(\'camera\')"><span class="attach-icon">📷</span><span>'+t('attach_camera')+'</span></button>'+
+    '<button class="attach-opt" onclick="triggerPhotoInput(\'gallery\')"><span class="attach-icon">🖼️</span><span>'+t('attach_gallery')+'</span></button>'+
+    '<button class="attach-opt" onclick="triggerPhotoInput(\'files\')"><span class="attach-icon">📄</span><span>'+t('attach_files')+'</span></button>'+
+    '</div>'+
+    '<input type="file" id="photoInputCamera" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoPicked(this)">'+
+    '<input type="file" id="photoInputGallery" accept="image/*" style="display:none;" onchange="handlePhotoPicked(this)">'+
+    '<input type="file" id="photoInputFiles" accept="image/*,.pdf" style="display:none;" onchange="handlePhotoPicked(this)">'+
+    '</div>';
+  appendModalBackdrop(backdrop);
+  backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
+}
+function triggerPhotoInput(kind){
+  const id = kind==='camera' ? 'photoInputCamera' : (kind==='gallery' ? 'photoInputGallery' : 'photoInputFiles');
+  const el = document.getElementById(id);
+  if(el) el.click();
+}
+function handlePhotoPicked(inputEl){
+  const file = inputEl.files && inputEl.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    selectedPhoto = { name: file.name, dataUrl: e.target.result };
+    closeModal();
+    render();
+  };
+  reader.readAsDataURL(file);
+}
+function clearSelectedPhoto(){
+  selectedPhoto = null;
+  render();
 }
 function exportBackup(){
   const backup = { version:1, exportedAt: new Date().toISOString(), projects: projects, data: {} };
