@@ -109,6 +109,14 @@
   .chat-bubble .chat-ul:last-child{ margin-bottom:0; }
   .chat-bubble .chat-ul li{ margin-bottom:3px; }
   .chat-bubble strong{ color:var(--gold-deep); }
+  .chat-action-card{ align-self:flex-start; max-width:90%; background:#FFF8E8; border:1px solid #EBD9A8; border-radius:14px; padding:10px 12px; margin-top:-2px; }
+  .chat-action-title{ font-size:11.5px; font-weight:700; color:var(--gold-deep); text-transform:uppercase; letter-spacing:0.3px; margin-bottom:4px; }
+  .chat-action-card ul{ margin:0; padding-left:18px; font-size:13px; }
+  .chat-action-card li{ margin-bottom:3px; }
+  .chat-action-buttons{ display:flex; gap:8px; margin-top:8px; }
+  .chat-action-buttons button{ flex:1; padding:9px; border-radius:9px; font-weight:700; font-size:12.5px; cursor:pointer; border:none; }
+  .chat-action-confirm{ background:var(--blue-deep); color:#fff; }
+  .chat-action-cancel{ background:#fff; border:1px solid var(--line); color:var(--text); }
   .chat-bubble.thinking{ color:var(--text-dim); font-style:italic; }
   .chat-input-row{ display:flex; gap:7px; align-items:center; padding:10px 12px; border-top:1px solid var(--line); flex:none; }
   .chat-input-row .entry-input-wrap{ flex:1; }
@@ -349,7 +357,15 @@ const I18N = {
     ai_chat_title: 'Pitaj AI o troškovima',
     ai_chat_placeholder: 'Postavi pitanje o troškovima...',
     ai_chat_empty: 'Pitaj bilo šta o svojim troškovima - npr. "Koliko sam potrošio na hranu?"',
-    ai_chat_thinking: 'Razmišljam...'
+    ai_chat_thinking: 'Razmišljam...',
+    ai_action_title: 'AI predlaže:',
+    ai_action_add: 'Dodavanje',
+    ai_action_delete: 'Brisanje',
+    ai_action_edit: 'Izmena',
+    ai_action_confirm: 'Potvrdi',
+    ai_action_cancel: 'Odbaci',
+    ai_action_applied: 'Gotovo - izmene su sačuvane.',
+    ai_action_cancelled: 'U redu, izmene nisu primenjene.'
   },
   'en-US': {
     empty_project: 'No expenses entered in this project yet.',
@@ -459,7 +475,15 @@ const I18N = {
     ai_chat_title: 'Ask AI about expenses',
     ai_chat_placeholder: 'Ask a question about your expenses...',
     ai_chat_empty: 'Ask anything about your expenses - e.g. "How much did I spend on food?"',
-    ai_chat_thinking: 'Thinking...'
+    ai_chat_thinking: 'Thinking...',
+    ai_action_title: 'AI suggests:',
+    ai_action_add: 'Add',
+    ai_action_delete: 'Delete',
+    ai_action_edit: 'Edit',
+    ai_action_confirm: 'Confirm',
+    ai_action_cancel: 'Dismiss',
+    ai_action_applied: 'Done - changes saved.',
+    ai_action_cancelled: 'OK, changes were not applied.'
   }
 };
 function t(key){
@@ -1100,7 +1124,7 @@ function buildAllProjectsSummary(){
     const e = lsGet('entries:'+p.id);
     const list = (e && e.value) ? JSON.parse(e.value) : [];
     const items = list.map(it=>({
-      opis: it.opis, iznos: it.iznos, valuta: it.valuta,
+      id: it.id, opis: it.opis, iznos: it.iznos, valuta: it.valuta,
       kategorija: it.kategorija||'', datum: it.datum, napomena: it.napomena||''
     }));
     const r = lsGet('rates:'+p.id);
@@ -1118,13 +1142,29 @@ async function askAIAboutExpenses(question, chatHistory){
   const appLang = resolveAppLanguage();
   const targetLangName = appLang==='sr-RS' ? 'srpski' : 'engleski';
   const dataSummary = JSON.stringify(buildAllProjectsSummary());
-  const sys = `Ti si pomoćnik unutar aplikacije za praćenje troškova. Ispod su SVI projekti korisnika sa svim stavkama (u JSON formatu): ${dataSummary}. Odgovaraj na pitanja korisnika o ovim podacima - zbirovi, poređenja, pretraga, filtriranje po datumu/kategoriji/nazivu/projektu, itd. Odgovaraj KRATKO i JASNO na ${targetLangName} jeziku, bez obzira na jezik pitanja. Ako podaci ne sadrže odgovor, iskreno reci da ne možeš da nađeš tu informaciju u postojećim troškovima. Ti NE MOŽEŠ da menjaš, dodaješ ili brišeš stavke - samo da odgovaraš na pitanja o postojećim podacima.
+  const sys = `Ti si pomoćnik unutar aplikacije za praćenje troškova. Ispod su SVI projekti korisnika sa svim stavkama (u JSON formatu): ${dataSummary}. Odgovaraj na pitanja korisnika o ovim podacima - zbirovi, poređenja, pretraga, filtriranje po datumu/kategoriji/nazivu/projektu, itd. Odgovaraj KRATKO i JASNO na ${targetLangName} jeziku, bez obzira na jezik pitanja. Ako podaci ne sadrže odgovor, iskreno reci da ne možeš da nađeš tu informaciju u postojećim troškovima.
 
 FORMATIRANJE ODGOVORA: Piši prirodnim, jasnim rečenicama. Kad nabrajaš više stavki, svaku stavi u NOV RED i počni sa "- ", format: "- Naziv: iznos valuta (datum)". Ključne brojeve (ukupne iznose) podebljaj koristeći **dvostruke zvezdice** oko broja, npr. **339,60 RSD**. Ne koristi drugo markdown formatiranje (bez naslova, bez tabela).
 
-KRITIČNO PRAVILO PROTIV IZMIŠLJANJA: Koristi ISKLJUČIVO tačne podatke iz JSON-a iznad. NIKAD ne izmišljaj, ne pretpostavljaj i ne dodaješ detalje koji nisu eksplicitno prisutni u polju "opis", "kategorija" ili "napomena" date stavke (npr. ne izmišljaj naziv plaže, prodavnice, mesta ili bilo koji drugi detalj koji stavka ne sadrži). Kad navodiš spisak stavki, prikaži TAČAN "opis" iz podataka - ako se više stavki zove isto, navedi ih sve sa tim istim, tačnim nazivom i njihovim stvarnim datumom/iznosom, bez izmišljanja razlika među njima. Ako nisi siguran u neki detalj, izostavi ga umesto da nagađaš.
+KRITIČNO PRAVILO PROTIV IZMIŠLJANJA: Koristi ISKLJUČIVO tačne podatke iz JSON-a iznad. NIKAD ne izmišljaj, ne pretpostavljaj i ne dodaješ detalje koji nisu eksplicitno prisutni u polju "opis", "kategorija" ili "napomena" date stavke. Kad navodiš spisak stavki, prikaži TAČAN "opis" iz podataka. Ako nisi siguran u neki detalj, izostavi ga umesto da nagađaš.
 
-KONVERZIJA VALUTA: Svaki projekat ima polje "kursevi" sa poznatim kursevima (npr. "1 EUR = 117 RSD"). Kad korisnik traži iznos u drugoj valuti nego što je stavka izvorno uneta, koristi TAJ kurs da preračunaš (zaokruži na 2 decimale). Ako kurs za traženi par valuta ne postoji u podacima, tek onda reci da ne možeš da konvertuješ.`;
+KONVERZIJA VALUTA: Svaki projekat ima polje "kursevi" sa poznatim kursevima (npr. "1 EUR = 117 RSD"). Kad korisnik traži iznos u drugoj valuti nego što je stavka izvorno uneta, koristi TAJ kurs da preračunaš (zaokruži na 2 decimale). Ako kurs za traženi par valuta ne postoji u podacima, tek onda reci da ne možeš da konvertuješ.
+
+IZMENE PODATAKA (dodavanje/izmena/brisanje stavki): Ti MOŽEŠ da predložiš izmenu, brisanje ili dodavanje stavke - ali NIKAD je ne primenjuješ sam. Korisnik mora ručno da potvrdi svaki predlog u aplikaciji. Predloži izmenu kad: (a) korisnik eksplicitno traži da nešto promeniš/obrišeš/dodaš, ili (b) primetiš očiglednu nepravilnost u podacima (npr. pogrešna kategorija, sumnjiv duplikat, o čemu te pita) I korisnik se slaže da se to ispravi.
+
+Kad predlažeš izmenu, na SAMOM KRAJU odgovora (posle tvog običnog teksta objašnjenja) dodaj tačno ovaj blok, bez ičeg posle njega:
+###AKCIJA###
+[{"tip":"izmeni","projekat_id":"...","stavka_id":"...","polja":{"kategorija":"nova vrednost"}}]
+###KRAJ###
+
+Pravila za JSON u AKCIJA bloku (mora biti validan JSON niz, čak i za jednu stavku):
+- "tip": jedno od "izmeni", "obrisi", "dodaj"
+- "projekat_id": tačan "id" projekta iz podataka iznad
+- za "izmeni": "stavka_id" (tačan "id" stavke) + "polja": objekat SAMO sa poljima koja se menjaju (opis/iznos/valuta/kategorija/datum/napomena)
+- za "obrisi": samo "stavka_id"
+- za "dodaj": BEZ "stavka_id", umesto toga "polja": objekat sa opis/iznos/valuta/kategorija/datum (sva obavezna osim napomene)
+- Ako predlažeš više izmena odjednom, stavi ih sve u isti niz.
+- Ako korisnik NE traži izmenu i ti ništa ne predlažeš, NE dodaji ###AKCIJA### blok uopšte - samo obično odgovori.`;
 
   const history = (chatHistory||[]).map(m=>({ role: m.role==='user'?'user':'model', parts:[{text:m.text}] }));
 
@@ -1170,6 +1210,73 @@ function closeChatMode(){
   const el = document.getElementById('chatOverlayRoot');
   if(el) el.remove();
 }
+function parseAIAction(raw){
+  const marker = /###AKCIJA###([\s\S]*?)###KRAJ###/;
+  const match = marker.exec(raw);
+  if(!match) return { cleanText: raw.trim(), actions: null };
+  const cleanText = raw.slice(0, match.index).trim();
+  let actions = null;
+  try{ actions = JSON.parse(match[1].trim()); if(!Array.isArray(actions)) actions=null; }catch(e){ actions=null; }
+  return { cleanText: cleanText || raw.trim(), actions };
+}
+function describeAIAction(act){
+  const proj = projects.find(p=>p.id===act.projekat_id);
+  const projName = proj ? proj.name : '?';
+  if(act.tip==='dodaj'){
+    const f = act.polja||{};
+    return t('ai_action_add')+': "'+(f.opis||'')+'" '+fmtNum(f.iznos||0)+' '+(f.valuta||'')+(f.kategorija?' · '+f.kategorija:'')+(f.datum?' ('+dmFromISO(f.datum)+')':'')+' — '+projName;
+  }
+  const e = lsGet('entries:'+act.projekat_id);
+  const list = (e && e.value) ? JSON.parse(e.value) : [];
+  const item = list.find(it=>it.id===act.stavka_id);
+  const itemDesc = item ? (item.opis+' '+fmtNum(item.iznos)+' '+item.valuta+' ('+dmFromISO(item.datum)+')') : (act.stavka_id||'?');
+  if(act.tip==='obrisi'){
+    return t('ai_action_delete')+': "'+itemDesc+'" — '+projName;
+  }
+  if(act.tip==='izmeni'){
+    const changes = Object.keys(act.polja||{}).map(k=> k+': '+act.polja[k]).join(', ');
+    return t('ai_action_edit')+': "'+itemDesc+'" → '+changes+' — '+projName;
+  }
+  return '';
+}
+function applyProjectEntriesChange(projectId, mutatorFn){
+  const e = lsGet('entries:'+projectId);
+  let list = (e && e.value) ? JSON.parse(e.value) : [];
+  list = mutatorFn(list);
+  lsSet('entries:'+projectId, JSON.stringify(list));
+  if(currentProjectId === projectId){
+    entries = list;
+    render();
+  }
+}
+function applyAIActions(msgIdx){
+  const msg = chatMessages[msgIdx];
+  if(!msg || !msg.actions) return;
+  msg.actions.forEach(act=>{
+    try{
+      if(act.tip==='izmeni'){
+        applyProjectEntriesChange(act.projekat_id, list=> list.map(it=> it.id===act.stavka_id ? Object.assign({}, it, act.polja||{}) : it));
+      } else if(act.tip==='obrisi'){
+        applyProjectEntriesChange(act.projekat_id, list=> list.filter(it=> it.id!==act.stavka_id));
+      } else if(act.tip==='dodaj'){
+        applyProjectEntriesChange(act.projekat_id, list=>{
+          list.push(Object.assign({id: uid('e'), napomena:''}, act.polja||{}));
+          return list;
+        });
+      }
+    }catch(err){ /* ignore pojedinacnu gresku, nastavi sa ostalima */ }
+  });
+  msg.actionStatus = 'applied';
+  chatMessages.push({role:'ai', text: t('ai_action_applied')});
+  renderChatOverlay();
+}
+function cancelAIActions(msgIdx){
+  const msg = chatMessages[msgIdx];
+  if(!msg) return;
+  msg.actionStatus = 'cancelled';
+  chatMessages.push({role:'ai', text: t('ai_action_cancelled')});
+  renderChatOverlay();
+}
 function formatAIChatText(text){
   const escaped = escapeHtml(text);
   const lines = escaped.split('\n');
@@ -1196,7 +1303,17 @@ function renderChatOverlay(){
     '<div class="chat-header"><h2>'+t('ai_chat_title')+'</h2><button class="chat-close-btn" onclick="closeChatMode()">✕</button></div>'+
     '<div class="chat-messages" id="chatMessagesEl">'+
     (chatMessages.length===0 ? ('<div class="chat-empty">'+t('ai_chat_empty')+'</div>') :
-      chatMessages.map(m=>'<div class="chat-bubble '+m.role+(m.thinking?' thinking':'')+'">'+(m.role==='ai' && !m.thinking ? formatAIChatText(m.text) : escapeHtml(m.text))+'</div>').join('')
+      chatMessages.map((m,idx)=>
+        '<div class="chat-bubble '+m.role+(m.thinking?' thinking':'')+'">'+(m.role==='ai' && !m.thinking ? formatAIChatText(m.text) : escapeHtml(m.text))+'</div>'+
+        (m.actions && m.actionStatus==='pending' ?
+          '<div class="chat-action-card"><div class="chat-action-title">'+t('ai_action_title')+'</div>'+
+          '<ul>'+m.actions.map(act=>'<li>'+escapeHtml(describeAIAction(act))+'</li>').join('')+'</ul>'+
+          '<div class="chat-action-buttons">'+
+          '<button class="chat-action-confirm" onclick="applyAIActions('+idx+')">'+t('ai_action_confirm')+'</button>'+
+          '<button class="chat-action-cancel" onclick="cancelAIActions('+idx+')">'+t('ai_action_cancel')+'</button>'+
+          '</div></div>'
+        : '')
+      ).join('')
     )+
     '</div>'+
     '<div class="chat-input-row">'+
@@ -1227,7 +1344,8 @@ async function sendChatMessage(){
     return;
   }
   chatMessages.pop();
-  chatMessages.push({role:'ai', text: answer});
+  const parsed = parseAIAction(answer);
+  chatMessages.push({role:'ai', text: parsed.cleanText, actions: parsed.actions, actionStatus: parsed.actions ? 'pending' : null});
   renderChatOverlay();
 }
 
