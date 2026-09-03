@@ -1132,7 +1132,7 @@ KONVERZIJA VALUTA: Svaki projekat ima polje "kursevi" sa poznatim kursevima (npr
   const timeoutId = setTimeout(()=>controller.abort(), 25000);
   let resp;
   try{
-    resp = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key="+encodeURIComponent(apiKey), {
+    resp = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key="+encodeURIComponent(apiKey), {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({
@@ -1164,6 +1164,7 @@ let chatMessages = [];
 function openChatMode(){
   chatMessages = [];
   renderChatOverlay();
+  try{ history.pushState({chatOpen:true}, '', location.href); }catch(e){}
 }
 function closeChatMode(){
   const el = document.getElementById('chatOverlayRoot');
@@ -1481,6 +1482,7 @@ function closeModal(){
 window.addEventListener('popstate', function(){
   const m = document.getElementById('modalBackdrop'); if(m) m.remove();
   const c = document.getElementById('confirmBackdrop'); if(c) c.remove();
+  const ch = document.getElementById('chatOverlayRoot'); if(ch) ch.remove();
   if(searchOpen){ searchOpen = false; searchQuery=''; render(); }
   releaseScrollLockIfNoModals();
 });
