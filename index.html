@@ -957,15 +957,49 @@ function groupByDate(){
   const sorted=[...entries].sort((a,b)=>a.datum.localeCompare(b.datum));
   const groups={}; sorted.forEach(e=>{ (groups[e.datum]=groups[e.datum]||[]).push(e); }); return groups;
 }
+function groupByKeyIgnoreCase(getKeyFn, fallback){
+  const byLower = {};
+  entries.forEach(e=>{
+    const raw = (getKeyFn(e)||'').trim() || fallback;
+    const lower = foldDiacritics(raw);
+    if(!byLower[lower]) byLower[lower] = { label: raw, items: [] };
+    byLower[lower].items.push(e);
+  });
+  const out = {};
+  Object.values(byLower).forEach(g=>{ out[g.label] = g.items; });
+  return out;
+}
 function groupByCategory(){
-  const groups={};
-  entries.forEach(e=>{ const k=e.kategorija||'Ostalo'; (groups[k]=groups[k]||[]).push(e); });
-  return groups;
+  return groupByKeyIgnoreCase(e=>e.kategorija, 'Ostalo');
+}
+function stemNormalize(raw){
+  const folded = foldDiacritics(raw);
+  return folded.split(' ').map(w=>{
+    if(w.length>3 && /[aeiou]$/.test(w)) return w.slice(0,-1);
+    return w;
+  }).join(' ');
 }
 function groupByName(){
-  const groups={};
-  entries.forEach(e=>{ const k=(e.opis||'').trim() || t('no_description_group'); (groups[k]=groups[k]||[]).push(e); });
-  return groups;
+  const groups = []; // { label, normLabel, items }
+  entries.forEach(e=>{
+    const raw = (e.opis||'').trim() || t('no_description_group');
+    const norm = stemNormalize(raw);
+    let found = null;
+    for(const g of groups){
+      if(norm===g.normLabel || norm.startsWith(g.normLabel+' ') || g.normLabel.startsWith(norm+' ')){
+        found = g; break;
+      }
+    }
+    if(found){
+      found.items.push(e);
+      if(norm.length < found.normLabel.length){ found.label = raw; found.normLabel = norm; }
+    } else {
+      groups.push({ label: raw, normLabel: norm, items: [e] });
+    }
+  });
+  const out = {};
+  groups.forEach(g=>{ out[g.label] = g.items; });
+  return out;
 }
 
 /* ---------- RENDER ---------- */
