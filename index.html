@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Troškovi</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style/dist/xlsx.min.js"></script>
 <style>
   :root{
     --bg:#FFFFFF; --bg-card:#F7F5EF; --bg-elevated:#EFEADD;
@@ -1838,30 +1838,112 @@ function exportXlsx(){
   const dispCur = displayCurrency();
   const groups = groupByDate();
   const dates = Object.keys(groups);
+
+  const COL_BLUE = "163B69", COL_GOLD_BG = "FFF8E8", COL_GOLD_TXT = "96690A",
+        COL_WHITE = "FFFFFF", COL_LINE = "E4E0D4", COL_ROW_ALT = "FBFAF6", COL_AMBER = "FFC94A";
+
+  const fullBorder = { top:{style:"thin",color:{rgb:COL_LINE}}, bottom:{style:"thin",color:{rgb:COL_LINE}}, left:{style:"thin",color:{rgb:COL_LINE}}, right:{style:"thin",color:{rgb:COL_LINE}} };
+  const titleStyle = { font:{bold:true, sz:14, color:{rgb:COL_WHITE}}, fill:{fgColor:{rgb:COL_BLUE}}, alignment:{horizontal:"center", vertical:"center"}, border: fullBorder };
+  const headerStyle = { font:{bold:true, sz:10, color:{rgb:COL_WHITE}}, fill:{fgColor:{rgb:COL_BLUE}}, alignment:{horizontal:"center", vertical:"center"}, border: fullBorder };
+  const groupStyle = { font:{bold:true, sz:10.5, color:{rgb:COL_WHITE}}, fill:{fgColor:{rgb:COL_BLUE}}, border: fullBorder };
+  const totalLabelStyle = { font:{bold:true, color:{rgb:COL_GOLD_TXT}}, fill:{fgColor:{rgb:COL_GOLD_BG}}, border: fullBorder };
+  const totalValStyle = { font:{bold:true, color:{rgb:COL_GOLD_TXT}}, fill:{fgColor:{rgb:COL_GOLD_BG}}, alignment:{horizontal:"right"}, border: fullBorder, numFmt:"0.00" };
+  const grandStyle = { font:{bold:true, sz:12, color:{rgb:COL_WHITE}}, fill:{fgColor:{rgb:COL_BLUE}}, border: fullBorder };
+  const grandValStyle = { font:{bold:true, sz:12, color:{rgb:COL_AMBER}}, fill:{fgColor:{rgb:COL_BLUE}}, alignment:{horizontal:"right"}, border: fullBorder, numFmt:"0.00" };
+  function rowStyle(alt, alignRight, numFmt){
+    const s = { border: fullBorder, protection:{ locked:false } };
+    if(alt) s.fill = { fgColor:{rgb:COL_ROW_ALT} };
+    if(alignRight) s.alignment = { horizontal:"right" };
+    if(numFmt) s.numFmt = numFmt;
+    return s;
+  }
+  function xc(v, style){
+    const tt = typeof v === 'number' ? 'n' : 's';
+    return { v: (v===undefined||v===null)?'':v, t: tt, s: style };
+  }
+  function xf(formula, style, cachedValue){
+    return { t:'n', f: formula, v: cachedValue, s: style };
+  }
+  function fullRow(vals, style){ return vals.map(v=>xc(v, style)); }
+
   const aoa = [];
-  aoa.push([proj.name]);
+  aoa.push(fullRow([proj.name,'','','','','',''], titleStyle));
   aoa.push([]);
-  aoa.push(['Datum','Opis','Kategorija','Iznos','Valuta','Iznos u '+dispCur,'Napomena']);
+  aoa.push(fullRow(['Datum','Opis','Kategorija','Iznos','Valuta','Iznos u '+dispCur,'Napomena'], headerStyle));
+
+  const merges = [{ s:{r:0,c:0}, e:{r:0,c:6} }];
+  const dayTotalRows = []; // excel (1-based) redovi sa "Ukupno [datum]" formulama
   let grand = 0;
+
   dates.forEach(date=>{
     const items = groups[date];
     let dayTotal = 0;
-    items.forEach(e=>{
+    const groupRowIdx = aoa.length;
+    aoa.push(fullRow([dmFromISO(date),'','','','','',''], groupStyle));
+    merges.push({ s:{r:groupRowIdx,c:0}, e:{r:groupRowIdx,c:6} });
+    const firstItemExcelRow = aoa.length+1; // prvi red stavki (1-based)
+    items.forEach((e,i)=>{
       const conv = convert(e.iznos, e.valuta, dispCur);
       if(conv!==null) dayTotal += conv;
-      aoa.push([dmFromISO(e.datum), e.opis, e.kategorija||'', e.iznos, e.valuta, conv!==null?Math.round(conv*100)/100:'', e.napomena||'']);
+      const alt = i%2===1;
+      const rowNum = aoa.length+1; // 1-based excel red koji upravo gradimo
+      let fCell;
+      if(e.valuta===dispCur){
+        fCell = xf('D'+rowNum, rowStyle(alt, true, "0.00"), e.iznos);
+      } else {
+        const factor = convert(1, e.valuta, dispCur);
+        fCell = factor!==null
+          ? xf('D'+rowNum+'*'+factor, rowStyle(alt, true, "0.00"), Math.round(e.iznos*factor*100)/100)
+          : xc('', rowStyle(alt, true));
+      }
+      aoa.push([
+        xc(dmFromISO(e.datum), rowStyle(alt)), xc(e.opis, rowStyle(alt)), xc(e.kategorija||'', rowStyle(alt)),
+        xc(e.iznos, rowStyle(alt, true, "0.00")), xc(e.valuta, rowStyle(alt)),
+        fCell,
+        xc(e.napomena||'', rowStyle(alt))
+      ]);
     });
-    aoa.push(['', 'Ukupno '+dmFromISO(date), '', '', '', Math.round(dayTotal*100)/100, '']);
+    const lastItemExcelRow = aoa.length; // 1-based
+    const totalRowIdx = aoa.length; // 0-based indeks reda koji sad dodajemo
+    aoa.push([
+      xc('', totalLabelStyle), xc('Ukupno '+dmFromISO(date), totalLabelStyle), xc('', totalLabelStyle),
+      xc('', totalLabelStyle), xc('', totalLabelStyle),
+      xf('SUM(F'+firstItemExcelRow+':F'+lastItemExcelRow+')', totalValStyle, Math.round(dayTotal*100)/100),
+      xc('', totalLabelStyle)
+    ]);
+    dayTotalRows.push(totalRowIdx+1); // 1-based excel red
     aoa.push([]);
     grand += dayTotal;
   });
-  aoa.push(['', 'UKUPNO PROJEKAT', '', '', '', Math.round(grand*100)/100, '']);
+
+  const grandRowIdx = aoa.length;
+  merges.push({ s:{r:grandRowIdx,c:0}, e:{r:grandRowIdx,c:4} });
+  const grandFormula = dayTotalRows.map(r=>'F'+r).join('+') || '0';
+  aoa.push([
+    xc('', grandStyle), xc('UKUPNO PROJEKAT', grandStyle), xc('', grandStyle), xc('', grandStyle), xc('', grandStyle),
+    xf(grandFormula, grandValStyle, Math.round(grand*100)/100), xc('', grandStyle)
+  ]);
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [{wch:8},{wch:30},{wch:14},{wch:10},{wch:8},{wch:14},{wch:28}];
+  const colMaxLen = [0,0,0,0,0,0,0];
+  aoa.forEach((row, ridx)=>{
+    if(ridx===0) return; // preskoci naslov (spojen preko cele sirine, ne racuna se)
+    row.forEach((cell, cidx)=>{
+      if(!cell || cell.v===undefined || cell.v===null || cell.v==='') return;
+      const s = String(cell.v);
+      if(s.length > colMaxLen[cidx]) colMaxLen[cidx] = s.length;
+    });
+  });
+  const minW = [8,10,10,8,6,10,8];
+  const maxW = [11,38,20,11,7,15,38];
+  ws['!cols'] = colMaxLen.map((len,i)=> ({ wch: Math.min(maxW[i], Math.max(minW[i], len+2)) }));
+  ws['!merges'] = merges;
+  ws['!rows'] = [{hpt:26}];
+  ws['!protect'] = {};
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, proj.name.slice(0,28) || 'Troskovi');
-  const fname = (proj.name||'troskovi').replace(/[^\w]+/g,'_')+'_'+todayISO()+'.xlsx';
+  const safeName = (proj.name||'troskovi').trim().replace(/[\\/:*?"<>|]+/g,'_').replace(/\s+/g,'_');
+  const fname = safeName+'_'+todayISO()+'.xlsx';
   XLSX.writeFile(wb, fname);
   showBanner('Excel fajl "'+fname+'" '+t('excel_downloading'), 'info');
 }
