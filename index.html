@@ -236,8 +236,8 @@ let pendingPct = 0;
 let isProcessing = false;
 let selectedPhoto = null; // { name, dataUrl } - izabrana fotografija racuna, ceka slanje ka AI
 const LANGS = [
-  {code:'auto', label:'Automatski (jezik telefona)'},
-  {code:'sr-RS', label:'Srpski'},{code:'en-US', label:'Engleski'}
+  {code:'auto', label:'automatski (jezik telefona)'},
+  {code:'sr-RS', label:'srpski'},{code:'en-US', label:'engleski'}
 ];
 
 /* ---------- I18N: mehanizam za prevod cele aplikacije ---------- */
@@ -250,240 +250,240 @@ function resolveAppLanguage(){
 }
 const I18N = {
   'sr-RS': {
-    empty_project: 'Nema unetih troškova u ovom projektu.',
-    empty_project_hint: 'Diktiraj ili ukucaj prvu stavku ispod.',
-    total: 'Ukupno',
+    empty_project: 'nema unetih troškova u ovom projektu.',
+    empty_project_hint: 'diktiraj ili ukucaj prvu stavku ispod.',
+    total: 'ukupno',
     exchange_rate_unknown: 'kurs?',
-    no_search_results: 'Nema stavki koje odgovaraju pretrazi',
-    cancel: 'Otkaži',
-    save_now: 'Sačuvaj sad',
-    recognized_items: 'Prepoznato',
+    no_search_results: 'nema stavki koje odgovaraju pretrazi',
+    cancel: 'otkaži',
+    save_now: 'sačuvaj sad',
+    recognized_items: 'prepoznato',
     review_and_save: 'stavki - proveri pa sačuvaj',
-    duplicate_exists: 'Već postoji',
+    duplicate_exists: 'već postoji',
     on_date: 'na',
     possible_duplicate: 'moguć duplikat',
     category_placeholder: 'kategorija',
-    cancel_all: 'Otkaži sve',
-    save_all: 'Sačuvaj sve',
-    new_project: 'Novi projekat',
-    search: 'Pretraga',
-    settings: 'Podešavanja',
-    search_placeholder: 'Pretraži po opisu, kategoriji, napomeni...',
-    date: 'Datum',
-    category: 'Kategorija',
+    cancel_all: 'otkaži sve',
+    save_all: 'sačuvaj sve',
+    new_project: 'novi projekat',
+    search: 'pretraga',
+    settings: 'podešavanja',
+    search_placeholder: 'pretraži po opisu, kategoriji, napomeni...',
+    date: 'datum',
+    category: 'kategorija',
     items_short: 'st.',
-    manual_input_placeholder: 'Ukucaj ili koristi mikrofon na tastaturi...',
-    project_settings_title: 'Podešavanja projekta',
-    section_basic: 'Osnovno',
-    project_name: 'Naziv projekta',
-    app_language: 'Jezik aplikacije',
-    save: 'Sačuvaj',
-    section_data: 'Podaci',
-    export_project_excel: 'Izvezi ovaj projekat u Excel',
-    backup_export: 'Rezervna kopija - izvezi (svi projekti)',
-    backup_import: 'Rezervna kopija - uvezi',
-    backup_hint: 'Rezervna kopija čuva SVE projekte odjednom - sačuvaj je povremeno (npr. u Google Drive) da ne izgubiš podatke.',
+    manual_input_placeholder: 'ukucaj ili koristi mikrofon na tastaturi...',
+    project_settings_title: 'podešavanja projekta',
+    section_basic: 'osnovno',
+    project_name: 'naziv projekta',
+    app_language: 'jezik aplikacije',
+    save: 'sačuvaj',
+    section_data: 'podaci',
+    export_project_excel: 'izvezi ovaj projekat u Excel',
+    backup_export: 'rezervna kopija - izvezi (svi projekti)',
+    backup_import: 'rezervna kopija - uvezi',
+    backup_hint: 'rezervna kopija čuva sve projekte odjednom - sačuvaj je povremeno (npr. u Google Drive) da ne izgubiš podatke.',
     section_ai_key: 'AI ključ',
     gemini_key_label: 'Google Gemini API ključ',
-    save_key: 'Sačuvaj ključ',
-    delete: 'Obriši',
-    key_hint: 'Ključ se čuva samo na ovom telefonu, u ovom pregledaču. Napraviš ga besplatno na aistudio.google.com (bez kartice) → Get API key.',
-    section_danger: 'Opasna zona',
-    delete_project: 'Obriši projekat',
-    new_project_placeholder: 'npr. Renoviranje kupatila',
-    create: 'Napravi',
-    confirm_title: 'Potvrda',
-    default_yes_delete: 'Da, obriši',
-    no: 'Ne',
-    rate_title: 'Kurs valute',
+    save_key: 'sačuvaj ključ',
+    delete: 'obriši',
+    key_hint: 'ključ se čuva samo na ovom telefonu, u ovom pregledaču. napraviš ga besplatno na aistudio.google.com (bez kartice) → Get API key.',
+    section_danger: 'opasna zona',
+    delete_project: 'obriši projekat',
+    new_project_placeholder: 'npr. renoviranje kupatila',
+    create: 'napravi',
+    confirm_title: 'potvrda',
+    default_yes_delete: 'da, obriši',
+    no: 'ne',
+    rate_title: 'kurs valute',
     rate_how_much: 'koliko',
     rate_placeholder: 'npr. 117.50',
-    currency_pair_title: 'Izaberi valute',
-    first_currency: 'Prva valuta',
-    second_currency: 'Druga valuta',
-    choose_diff_currencies: 'Izaberi dve različite valute.',
-    date_modal_title: 'Datum unosa',
-    edit_entry_title: 'Izmeni stavku',
-    label_description: 'Opis',
-    label_amount: 'Iznos',
-    label_currency: 'Valuta',
-    label_note: 'Napomena',
-    confirm_delete_entry: 'Obrisati ovu stavku troška? Ovo ne može da se poništi.',
-    no_projects_found: 'Nema projekata koji odgovaraju pretrazi.',
-    created_on: 'Napravljen',
+    currency_pair_title: 'izaberi valute',
+    first_currency: 'prva valuta',
+    second_currency: 'druga valuta',
+    choose_diff_currencies: 'izaberi dve različite valute.',
+    date_modal_title: 'datum unosa',
+    edit_entry_title: 'izmeni stavku',
+    label_description: 'opis',
+    label_amount: 'iznos',
+    label_currency: 'valuta',
+    label_note: 'napomena',
+    confirm_delete_entry: 'obrisati ovu stavku troška? ovo ne može da se poništi.',
+    no_projects_found: 'nema projekata koji odgovaraju pretrazi.',
+    created_on: 'napravljen',
     selected: 'izabrano',
-    export_short: 'Izvezi',
-    delete_short: 'Obriši',
-    exported_projects: 'Izvezeno',
+    export_short: 'izvezi',
+    delete_short: 'obriši',
+    exported_projects: 'izvezeno',
     projects_word: 'projekata',
-    confirm_delete_projects: 'Obrisati',
-    confirm_delete_projects_end: 'izabranih projekata i sve njihove troškove? Ovo ne može da se poništi.',
+    confirm_delete_projects: 'obrisati',
+    confirm_delete_projects_end: 'izabranih projekata i sve njihove troškove? ovo ne može da se poništi.',
     projects_deleted: 'projekata obrisano.',
-    projects_title: 'Projekti',
-    search_projects_placeholder: '🔍 Pretraži projekte...',
-    long_press_hint: 'Dug dodir na projekat za brisanje/izvoz više odjednom',
-    restored: 'Vraćeno.',
-    ai_processing_error: 'Greška pri obradi. Pokušaj ponovo.',
-    ai_no_items_recognized: 'AI nije prepoznao nijednu stavku iz tog teksta. Probaj drugačiju formulaciju (npr. "naziv 10 eur").',
-    backup_downloaded: 'Rezervna kopija preuzeta - sačuvaj je na sigurno mesto (npr. Google Drive).',
-    import_field_missing: 'Greška: polje za uvoz nije pronađeno na stranici.',
-    cannot_open_file_picker: 'Ne mogu da otvorim izbor fajla:',
-    file_not_valid_json: 'Fajl nije validan (nije ispravan JSON).',
-    file_not_valid_backup: 'Ovaj fajl ne izgleda kao ispravna rezervna kopija.',
-    backup_will_replace: 'Ovo će ZAMENITI sve trenutne projekte podacima iz rezervne kopije',
+    projects_title: 'projekti',
+    search_projects_placeholder: '🔍 pretraži projekte...',
+    long_press_hint: 'dug dodir na projekat za brisanje/izvoz više odjednom',
+    restored: 'vraćeno.',
+    ai_processing_error: 'greška pri obradi. pokušaj ponovo.',
+    ai_no_items_recognized: 'AI nije prepoznao nijednu stavku iz tog teksta. probaj drugačiju formulaciju (npr. "naziv 10 eur").',
+    backup_downloaded: 'rezervna kopija preuzeta - sačuvaj je na sigurno mesto (npr. Google Drive).',
+    import_field_missing: 'greška: polje za uvoz nije pronađeno na stranici.',
+    cannot_open_file_picker: 'ne mogu da otvorim izbor fajla:',
+    file_not_valid_json: 'fajl nije validan (nije ispravan JSON).',
+    file_not_valid_backup: 'ovaj fajl ne izgleda kao ispravna rezervna kopija.',
+    backup_will_replace: 'ovo će zameniti sve trenutne projekte podacima iz rezervne kopije',
     backup_will_replace_mid: 'projekat(a) iz',
     backup_unknown_date: 'nepoznatog datuma',
-    backup_current_lost: 'Trenutni podaci će biti izgubljeni. Nastaviti?',
-    backup_imported_ok: 'Rezervna kopija uspešno uvezena.',
+    backup_current_lost: 'trenutni podaci će biti izgubljeni. nastaviti?',
+    backup_imported_ok: 'rezervna kopija uspešno uvezena.',
     api_key_saved: 'API ključ sačuvan.',
-    confirm_delete_api_key: 'Obrisati sačuvani API ključ? Glasovni/AI unos neće raditi dok ne uneseš novi.',
+    confirm_delete_api_key: 'obrisati sačuvani API ključ? glasovni/AI unos neće raditi dok ne uneseš novi.',
     api_key_deleted: 'API ključ obrisan.',
-    no_items_to_export: 'Nema stavki za izvoz u ovom projektu.',
+    no_items_to_export: 'nema stavki za izvoz u ovom projektu.',
     excel_downloading: 'se preuzima - proveri Preuzimanja na telefonu.',
-    confirm_delete_project_full: 'Obrisati projekat',
-    confirm_delete_project_full_end: 'i sve njegove troškove? Ovo ne može da se poništi.',
-    default_project_name: 'Novi projekat',
-    server_timeout: 'Server nije odgovorio na vreme (20 sekundi). Proveri internet i probaj ponovo.',
-    cannot_connect_ai: 'Ne mogu da se povežem sa AI servisom:',
-    attach_photo: 'Dodaj fotografiju računa',
-    attach_camera: 'Kamera',
-    attach_gallery: 'Galerija',
-    attach_files: 'Dokumenti',
-    photo_selected: 'Izabrana slika',
-    remove_photo: 'Ukloni',
-    view_by_name: 'Naziv',
-    category_short: 'Kat.',
+    confirm_delete_project_full: 'obrisati projekat',
+    confirm_delete_project_full_end: 'i sve njegove troškove? ovo ne može da se poništi.',
+    default_project_name: 'novi projekat',
+    server_timeout: 'server nije odgovorio na vreme (20 sekundi). proveri internet i probaj ponovo.',
+    cannot_connect_ai: 'ne mogu da se povežem sa AI servisom:',
+    attach_photo: 'dodaj fotografiju računa',
+    attach_camera: 'kamera',
+    attach_gallery: 'galerija',
+    attach_files: 'dokumenti',
+    photo_selected: 'izabrana slika',
+    remove_photo: 'ukloni',
+    view_by_name: 'naziv',
+    category_short: 'kat.',
     no_description_group: '(bez naziva)',
-    ai_chat_title: 'Pitaj AI o troškovima',
-    ai_chat_placeholder: 'Postavi pitanje o troškovima...',
-    ai_chat_empty: 'Pitaj bilo šta o svojim troškovima - npr. "Koliko sam potrošio na hranu?"',
-    ai_chat_thinking: 'Razmišljam...',
+    ai_chat_title: 'pitaj AI o troškovima',
+    ai_chat_placeholder: 'postavi pitanje o troškovima...',
+    ai_chat_empty: 'pitaj bilo šta o svojim troškovima - npr. "koliko sam potrošio na hranu?"',
+    ai_chat_thinking: 'razmišljam...',
     ai_action_title: 'AI predlaže:',
-    ai_action_add: 'Dodavanje',
-    ai_action_delete: 'Brisanje',
-    ai_action_edit: 'Izmena',
-    ai_action_confirm: 'Potvrdi',
-    ai_action_cancel: 'Odbaci',
-    ai_action_applied: 'Gotovo - izmene su sačuvane.',
-    ai_action_cancelled: 'U redu, izmene nisu primenjene.'
+    ai_action_add: 'dodavanje',
+    ai_action_delete: 'brisanje',
+    ai_action_edit: 'izmena',
+    ai_action_confirm: 'potvrdi',
+    ai_action_cancel: 'odbaci',
+    ai_action_applied: 'gotovo - izmene su sačuvane.',
+    ai_action_cancelled: 'u redu, izmene nisu primenjene.'
   },
   'en-US': {
-    empty_project: 'No expenses entered in this project yet.',
-    empty_project_hint: 'Dictate or type the first item below.',
-    total: 'Total',
+    empty_project: 'no expenses entered in this project yet.',
+    empty_project_hint: 'dictate or type the first item below.',
+    total: 'total',
     exchange_rate_unknown: 'rate?',
-    no_search_results: 'No items match the search',
-    cancel: 'Cancel',
-    save_now: 'Save now',
-    recognized_items: 'Recognized',
+    no_search_results: 'no items match the search',
+    cancel: 'cancel',
+    save_now: 'save now',
+    recognized_items: 'recognized',
     review_and_save: 'items - review and save',
-    duplicate_exists: 'Already exists',
+    duplicate_exists: 'already exists',
     on_date: 'on',
     possible_duplicate: 'possible duplicate',
     category_placeholder: 'category',
-    cancel_all: 'Cancel all',
-    save_all: 'Save all',
-    new_project: 'New project',
-    search: 'Search',
-    settings: 'Settings',
-    search_placeholder: 'Search by description, category, note...',
-    date: 'Date',
-    category: 'Category',
+    cancel_all: 'cancel all',
+    save_all: 'save all',
+    new_project: 'new project',
+    search: 'search',
+    settings: 'settings',
+    search_placeholder: 'search by description, category, note...',
+    date: 'date',
+    category: 'category',
     items_short: 'items',
-    manual_input_placeholder: 'Type or use the keyboard microphone...',
-    project_settings_title: 'Project settings',
-    section_basic: 'Basics',
-    project_name: 'Project name',
-    app_language: 'App language',
-    save: 'Save',
-    section_data: 'Data',
-    export_project_excel: 'Export this project to Excel',
-    backup_export: 'Backup - export (all projects)',
-    backup_import: 'Backup - import',
-    backup_hint: 'The backup saves ALL projects at once - save it occasionally (e.g. to Google Drive) so you don\'t lose your data.',
+    manual_input_placeholder: 'type or use the keyboard microphone...',
+    project_settings_title: 'project settings',
+    section_basic: 'basics',
+    project_name: 'project name',
+    app_language: 'app language',
+    save: 'save',
+    section_data: 'data',
+    export_project_excel: 'export this project to Excel',
+    backup_export: 'backup - export (all projects)',
+    backup_import: 'backup - import',
+    backup_hint: 'the backup saves all projects at once - save it occasionally (e.g. to Google Drive) so you don\'t lose your data.',
     section_ai_key: 'AI key',
     gemini_key_label: 'Google Gemini API key',
-    save_key: 'Save key',
-    delete: 'Delete',
-    key_hint: 'The key is stored only on this phone, in this browser. Get one for free at aistudio.google.com (no card needed) → Get API key.',
-    section_danger: 'Danger zone',
-    delete_project: 'Delete project',
-    new_project_placeholder: 'e.g. Bathroom renovation',
-    create: 'Create',
-    confirm_title: 'Confirmation',
-    default_yes_delete: 'Yes, delete',
-    no: 'No',
-    rate_title: 'Exchange rate',
+    save_key: 'save key',
+    delete: 'delete',
+    key_hint: 'the key is stored only on this phone, in this browser. get one for free at aistudio.google.com (no card needed) → Get API key.',
+    section_danger: 'danger zone',
+    delete_project: 'delete project',
+    new_project_placeholder: 'e.g. bathroom renovation',
+    create: 'create',
+    confirm_title: 'confirmation',
+    default_yes_delete: 'yes, delete',
+    no: 'no',
+    rate_title: 'exchange rate',
     rate_how_much: 'how much',
     rate_placeholder: 'e.g. 117.50',
-    currency_pair_title: 'Choose currencies',
-    first_currency: 'First currency',
-    second_currency: 'Second currency',
-    choose_diff_currencies: 'Choose two different currencies.',
-    date_modal_title: 'Entry date',
-    edit_entry_title: 'Edit item',
-    label_description: 'Description',
-    label_amount: 'Amount',
-    label_currency: 'Currency',
-    label_note: 'Note',
-    confirm_delete_entry: 'Delete this expense item? This cannot be undone.',
-    no_projects_found: 'No projects match the search.',
-    created_on: 'Created',
+    currency_pair_title: 'choose currencies',
+    first_currency: 'first currency',
+    second_currency: 'second currency',
+    choose_diff_currencies: 'choose two different currencies.',
+    date_modal_title: 'entry date',
+    edit_entry_title: 'edit item',
+    label_description: 'description',
+    label_amount: 'amount',
+    label_currency: 'currency',
+    label_note: 'note',
+    confirm_delete_entry: 'delete this expense item? this cannot be undone.',
+    no_projects_found: 'no projects match the search.',
+    created_on: 'created',
     selected: 'selected',
-    export_short: 'Export',
-    delete_short: 'Delete',
-    exported_projects: 'Exported',
+    export_short: 'export',
+    delete_short: 'delete',
+    exported_projects: 'exported',
     projects_word: 'projects',
-    confirm_delete_projects: 'Delete',
-    confirm_delete_projects_end: 'selected projects and all their expenses? This cannot be undone.',
+    confirm_delete_projects: 'delete',
+    confirm_delete_projects_end: 'selected projects and all their expenses? this cannot be undone.',
     projects_deleted: 'projects deleted.',
-    projects_title: 'Projects',
-    search_projects_placeholder: '🔍 Search projects...',
-    long_press_hint: 'Long-press a project to delete/export multiple at once',
-    restored: 'Restored.',
-    ai_processing_error: 'Error while processing. Please try again.',
-    ai_no_items_recognized: 'The AI couldn\'t recognize any item in that text. Try a different phrasing (e.g. "name 10 eur").',
-    backup_downloaded: 'Backup downloaded - save it somewhere safe (e.g. Google Drive).',
-    import_field_missing: 'Error: import field not found on the page.',
-    cannot_open_file_picker: 'Could not open the file picker:',
-    file_not_valid_json: 'The file is not valid (not proper JSON).',
-    file_not_valid_backup: 'This file doesn\'t look like a valid backup.',
-    backup_will_replace: 'This will REPLACE all current projects with the data from the backup',
+    projects_title: 'projects',
+    search_projects_placeholder: '🔍 search projects...',
+    long_press_hint: 'long-press a project to delete/export multiple at once',
+    restored: 'restored.',
+    ai_processing_error: 'error while processing. please try again.',
+    ai_no_items_recognized: 'the AI couldn\'t recognize any item in that text. try a different phrasing (e.g. "name 10 eur").',
+    backup_downloaded: 'backup downloaded - save it somewhere safe (e.g. Google Drive).',
+    import_field_missing: 'error: import field not found on the page.',
+    cannot_open_file_picker: 'could not open the file picker:',
+    file_not_valid_json: 'the file is not valid (not proper JSON).',
+    file_not_valid_backup: 'this file doesn\'t look like a valid backup.',
+    backup_will_replace: 'this will replace all current projects with the data from the backup',
     backup_will_replace_mid: 'project(s) from',
     backup_unknown_date: 'unknown date',
-    backup_current_lost: 'Current data will be lost. Continue?',
-    backup_imported_ok: 'Backup imported successfully.',
+    backup_current_lost: 'current data will be lost. continue?',
+    backup_imported_ok: 'backup imported successfully.',
     api_key_saved: 'API key saved.',
-    confirm_delete_api_key: 'Delete the saved API key? Voice/AI entry won\'t work until you enter a new one.',
+    confirm_delete_api_key: 'delete the saved API key? voice/AI entry won\'t work until you enter a new one.',
     api_key_deleted: 'API key deleted.',
-    no_items_to_export: 'No items to export in this project.',
+    no_items_to_export: 'no items to export in this project.',
     excel_downloading: 'is downloading - check Downloads on your phone.',
-    confirm_delete_project_full: 'Delete project',
-    confirm_delete_project_full_end: 'and all its expenses? This cannot be undone.',
-    default_project_name: 'New project',
-    server_timeout: 'The server didn\'t respond in time (20 seconds). Check your internet and try again.',
-    cannot_connect_ai: 'Could not connect to the AI service:',
-    attach_photo: 'Add receipt photo',
-    attach_camera: 'Camera',
-    attach_gallery: 'Gallery',
-    attach_files: 'Files',
-    photo_selected: 'Photo selected',
-    remove_photo: 'Remove',
-    view_by_name: 'Name',
-    category_short: 'Cat.',
+    confirm_delete_project_full: 'delete project',
+    confirm_delete_project_full_end: 'and all its expenses? this cannot be undone.',
+    default_project_name: 'new project',
+    server_timeout: 'the server didn\'t respond in time (20 seconds). check your internet and try again.',
+    cannot_connect_ai: 'could not connect to the AI service:',
+    attach_photo: 'add receipt photo',
+    attach_camera: 'camera',
+    attach_gallery: 'gallery',
+    attach_files: 'files',
+    photo_selected: 'photo selected',
+    remove_photo: 'remove',
+    view_by_name: 'name',
+    category_short: 'cat.',
     no_description_group: '(no description)',
-    ai_chat_title: 'Ask AI about expenses',
-    ai_chat_placeholder: 'Ask a question about your expenses...',
-    ai_chat_empty: 'Ask anything about your expenses - e.g. "How much did I spend on food?"',
-    ai_chat_thinking: 'Thinking...',
+    ai_chat_title: 'ask AI about expenses',
+    ai_chat_placeholder: 'ask a question about your expenses...',
+    ai_chat_empty: 'ask anything about your expenses - e.g. "how much did I spend on food?"',
+    ai_chat_thinking: 'thinking...',
     ai_action_title: 'AI suggests:',
-    ai_action_add: 'Add',
-    ai_action_delete: 'Delete',
-    ai_action_edit: 'Edit',
-    ai_action_confirm: 'Confirm',
-    ai_action_cancel: 'Dismiss',
-    ai_action_applied: 'Done - changes saved.',
-    ai_action_cancelled: 'OK, changes were not applied.'
+    ai_action_add: 'add',
+    ai_action_delete: 'delete',
+    ai_action_edit: 'edit',
+    ai_action_confirm: 'confirm',
+    ai_action_cancel: 'dismiss',
+    ai_action_applied: 'done - changes saved.',
+    ai_action_cancelled: 'ok, changes were not applied.'
   }
 };
 function t(key){
@@ -500,7 +500,20 @@ function dmyFromTimestamp(ts){
   return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear();
 }
 function isoFromParts(d,m,y){ return y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
-function fmtNum(n){ return (Math.round(n*100)/100).toLocaleString('sr-RS',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtNum(n){
+  const rounded = Math.round(n*100)/100;
+  const neg = rounded < 0;
+  const abs = Math.abs(rounded);
+  const parts = abs.toFixed(2).split('.');
+  let intPart = parts[0];
+  let withDots = '';
+  while(intPart.length > 3){
+    withDots = '.'+intPart.slice(-3)+withDots;
+    intPart = intPart.slice(0,-3);
+  }
+  withDots = intPart + withDots;
+  return (neg?'-':'') + withDots + ',' + parts[1];
+}
 function fmtAmt(n){ const s=fmtNum(n); return n<0 ? '<span class="neg-amt">'+s+'</span>' : s; }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 let bannerTimeout = null;
@@ -524,7 +537,7 @@ function showUndoToast(message){
   const t = document.getElementById('undoToast');
   if(!t) return;
   t.className = 'show';
-  t.innerHTML = '<span>'+escapeHtml(message)+'</span><button onclick="performUndo()">Poništi</button>';
+  t.innerHTML = '<span>'+escapeHtml(message)+'</span><button onclick="performUndo()">poništi</button>';
   clearTimeout(undoTimeout);
   undoTimeout = setTimeout(hideUndoToast, 6000);
 }
@@ -703,7 +716,7 @@ function deleteProject(pid){
   if(projects.length===0){ createProject(null,'auto'); }
   else if(currentProjectId===pid){ switchProject(projects[0].id); }
   else { render(); }
-  if(proj) showUndoToast('Projekat "'+proj.name+'" obrisan.');
+  if(proj) showUndoToast('projekat "'+proj.name+'" obrisan.');
 }
 function setActiveDate(iso){
   const proj = currentProject();
@@ -721,7 +734,7 @@ function commitEntries(items){
     entries.push({
       id: id, datum: it.datum || proj.activeDate || todayISO(),
       opis: it.opis, iznos: it.iznos, valuta: it.valuta,
-      kategorija: it.kategorija || 'Ostalo', napomena: it.napomena || ''
+      kategorija: it.kategorija || 'ostalo', napomena: it.napomena || ''
     });
     newIds.push(id);
   });
@@ -737,7 +750,7 @@ function deleteEntry(id){
   if(e){ lastDeleted = { type:'entry', projectId: currentProjectId, entry: JSON.parse(JSON.stringify(e)) }; }
   entries = entries.filter(x=>x.id!==id);
   persistEntries(); render();
-  if(e) showUndoToast('Stavka "'+e.opis+'" obrisana.');
+  if(e) showUndoToast('stavka "'+e.opis+'" obrisana.');
 }
 
 /* ---------- AI PARSING ---------- */
@@ -754,7 +767,7 @@ async function callGeminiForExpenses(contentPart, isAudio, isImage){
   const sys = `Danas: ${today}.${audioNote}${imageNote} Izvuci troškove (izvor može biti na bilo kom jeziku). Vrati SAMO JSON niz, bez markdown, bez ostalog teksta. Svaka stavka: {"opis":kratak opis PREVEDEN na ${targetLangName} jezik, "iznos":broj, "valuta":ISO 3 slova (podrazumevano "${guessCur}" ako nije rečeno), "kategorija":1-2 reči na ${targetLangName} (koristi tačno postojeću ako odgovara: ${knownCats.join(', ') || 'nema'}), "napomena":opciono, "datum":GGGG-MM-DD SAMO ako eksplicitno pomenut (izostavi polje ako nije)}. Više stavki/datuma = više objekata, svaki sa svojim tačnim datumom iz konteksta. Uvek prevedi opis i kategoriju na ${targetLangName}, bez obzira na to na kom jeziku je izvor (tekst, govor, ili tekst sa slike/računa). Naziv prodavnice/firme takođe transliteruj/prevedi u čitljiv oblik na ${targetLangName} pismu ako je izvor na drugom pismu (npr. grčki, ćirilica). Poznate valute: ${known.join(', ') || 'nema'}.`;
 
   const apiKey = getApiKey();
-  if(!apiKey){ throw new Error('Nije unet Gemini API ključ. Idi u Podešavanja (⚙) i unesi ga.'); }
+  if(!apiKey){ throw new Error('nije unet Gemini API ključ. idi u podešavanja (⚙) i unesi ga.'); }
 
   const controller = new AbortController();
   const timeoutId = setTimeout(()=>controller.abort(), 20000);
@@ -792,15 +805,15 @@ async function callGeminiForExpenses(contentPart, isAudio, isImage){
   }
   const candidate = data.candidates && data.candidates[0];
   if(!candidate){
-    throw new Error('Gemini nije vratio nijedan rezultat. Sirov odgovor: ' + JSON.stringify(data).slice(0,300));
+    throw new Error('Gemini nije vratio nijedan rezultat. sirov odgovor: ' + JSON.stringify(data).slice(0,300));
   }
   if(candidate.finishReason && candidate.finishReason !== 'STOP'){
-    throw new Error('Gemini je prekinuo odgovor (' + candidate.finishReason + '). Probaj kraću/jasniju rečenicu.');
+    throw new Error('Gemini je prekinuo odgovor (' + candidate.finishReason + '). probaj kraću/jasniju rečenicu.');
   }
 
   const raw = (candidate.content && candidate.content.parts && candidate.content.parts[0] && candidate.content.parts[0].text) || '';
   if(!raw.trim()){
-    throw new Error('Gemini je vratio prazan odgovor. Sirovo: ' + JSON.stringify(data).slice(0,300));
+    throw new Error('Gemini je vratio prazan odgovor. sirovo: ' + JSON.stringify(data).slice(0,300));
   }
   let items;
   try{ items = JSON.parse(raw); }catch(e){ throw new Error('Ne mogu da protumačim odgovor kao JSON: ' + raw.slice(0,200)); }
@@ -808,7 +821,7 @@ async function callGeminiForExpenses(contentPart, isAudio, isImage){
   return items.filter(it=>it && it.opis).map(it=>({
     opis: it.opis, iznos: parseFloat(it.iznos)||0,
     valuta: (it.valuta||guessCur||'RSD').toUpperCase(),
-    kategorija: it.kategorija || 'Ostalo',
+    kategorija: it.kategorija || 'ostalo',
     napomena: it.napomena||'', datum: it.datum || null
   }));
 }
@@ -818,7 +831,7 @@ async function parseWithAI(text){
 }
 async function parseImageWithAI(dataUrl, caption){
   const match = /^data:([^;]+);base64,(.*)$/s.exec(dataUrl);
-  if(!match) throw new Error('Neispravan format slike.');
+  if(!match) throw new Error('neispravan format slike.');
   const mimeType = match[1];
   const base64Data = match[2];
   const parts = [{ inlineData: { mimeType: mimeType, data: base64Data } }];
@@ -850,9 +863,9 @@ async function handleIncomingItems(parseFn){
     if(dup){
       render();
       showConfirmModal(
-        'Već postoji "'+dup.opis+' '+fmtNum(dup.iznos)+' '+dup.valuta+'" na '+dmFromISO(dup.datum)+'. Dodati ponovo, ili je ovo greška?',
+        'već postoji "'+dup.opis+' '+fmtNum(dup.iznos)+' '+dup.valuta.toLowerCase()+'" na '+dmFromISO(dup.datum)+'. dodati ponovo, ili je ovo greška?',
         ()=>{ startPendingSingle(items[0]); },
-        'Dodaj ipak', 'Otkaži', 'create-btn'
+        'dodaj ipak', 'otkaži', 'create-btn'
       );
       return;
     }
@@ -862,12 +875,12 @@ async function handleIncomingItems(parseFn){
     if(dupCount>0){
       render();
       const msg = dupCount===items.length
-        ? ('Svih '+dupCount+' prepoznatih stavki već postoji u projektu (obeleženo ispod). Dodati ih ipak, ili je ovo greška?')
-        : (dupCount+' od '+items.length+' prepoznatih stavki već postoji u projektu (obeleženo crveno ispod). Dodati sve ipak, ili je ovo greška?');
+        ? ('svih '+dupCount+' prepoznatih stavki već postoji u projektu (obeleženo ispod). dodati ih ipak, ili je ovo greška?')
+        : (dupCount+' od '+items.length+' prepoznatih stavki već postoji u projektu (obeleženo crveno ispod). dodati sve ipak, ili je ovo greška?');
       showConfirmModal(
         msg,
         ()=>{ startPendingBatch(items); },
-        'Dodaj ipak', 'Otkaži', 'create-btn'
+        'dodaj ipak', 'otkaži', 'create-btn'
       );
       return;
     }
@@ -970,7 +983,7 @@ function groupByKeyIgnoreCase(getKeyFn, fallback){
   return out;
 }
 function groupByCategory(){
-  return groupByKeyIgnoreCase(e=>e.kategorija, 'Ostalo');
+  return groupByKeyIgnoreCase(e=>e.kategorija, 'ostalo');
 }
 function stemNormalize(raw){
   const folded = foldDiacritics(raw);
@@ -1037,13 +1050,13 @@ function render(){
         if(conv!==null) groupTotal += conv;
         let mainText, subText;
         if(e.valuta === dispCur){
-          mainText = fmtAmt(e.iznos)+' '+e.valuta;
+          mainText = fmtAmt(e.iznos)+' '+e.valuta.toLowerCase();
           subText = '';
         } else if(conv !== null){
-          mainText = fmtAmt(conv)+' '+dispCur;
-          subText = '= '+fmtAmt(e.iznos)+' '+e.valuta;
+          mainText = fmtAmt(conv)+' '+dispCur.toLowerCase();
+          subText = '= '+fmtAmt(e.iznos)+' '+e.valuta.toLowerCase();
         } else {
-          mainText = fmtAmt(e.iznos)+' '+e.valuta;
+          mainText = fmtAmt(e.iznos)+' '+e.valuta.toLowerCase();
           subText = t('exchange_rate_unknown');
         }
         let metaLine;
@@ -1058,7 +1071,7 @@ function render(){
       const label = viewMode==='datum' ? dmFromISO(key) : key;
       return '<div class="group-block"><div class="group-head">'+escapeHtml(label)+'</div>'+
         '<table class="entries-table"><tbody>'+rows+
-        '<tr class="total-row"><td>'+t('total')+'</td><td class="col-amt num">'+fmtAmt(groupTotal)+' '+dispCur+'</td></tr>'+
+        '<tr class="total-row"><td>'+t('total')+'</td><td class="col-amt num">'+fmtAmt(groupTotal)+' '+dispCur.toLowerCase()+'</td></tr>'+
         '</tbody></table></div>';
     }).join('');
     if(searchActive && listHtml.trim()===''){
@@ -1068,18 +1081,18 @@ function render(){
 
   const curToggleHtml = used.length>1 ? (
     '<div class="cur-toggle">'+
-    used.map(c=>'<button class="'+(c===dispCur?'active':'')+'" onclick="setDisplayCurrency(\''+c+'\')">'+c+'</button>').join('')+
+    used.map(c=>'<button class="'+(c===dispCur?'active':'')+'" onclick="setDisplayCurrency(\''+c+'\')">'+c.toLowerCase()+'</button>').join('')+
     '</div>'
   ) : '';
 
   const rateBarHtml = otherCurrencies.length>0 ? (
     otherCurrencies.map(c=>
-      '<div class="rate-icon-btn" onclick="openRateModal(\''+c+'\',\''+dispCur+'\')" title="1 '+c+' = '+(rates[pairKey(c,dispCur)] ? fmtNum(convert(1,c,dispCur)) : '?')+' '+dispCur+'">'+
-      '<span class="ri-ic">'+c+'</span>'+
+      '<div class="rate-icon-btn" onclick="openRateModal(\''+c+'\',\''+dispCur+'\')" title="1 '+c.toLowerCase()+' = '+(rates[pairKey(c,dispCur)] ? fmtNum(convert(1,c,dispCur)) : '?')+' '+dispCur.toLowerCase()+'">'+
+      '<span class="ri-ic">'+c.toLowerCase()+'</span>'+
       '<span class="ri-val">'+(rates[pairKey(c,dispCur)] ? Math.round(convert(1,c,dispCur)) : '?')+'</span></div>'
     ).join('')+
     curToggleHtml+
-    '<button class="icon-btn" onclick="openCurrencyPairModal()" title="Izaberi valute" style="font-size:14px;">&#8646;</button>'
+    '<button class="icon-btn" onclick="openCurrencyPairModal()" title="izaberi valute" style="font-size:14px;">&#8646;</button>'
   ) : '';
 
   let pendingHtml = '';
@@ -1103,7 +1116,7 @@ function render(){
         '<div style="font-size:12.5px;color:var(--gold-deep);font-weight:700;margin-bottom:7px;">'+t('recognized_items')+' '+pendingItems.length+' '+t('review_and_save')+'</div>'+
         pendingItems.map((it,idx)=>{
           const dup = findDuplicateEntry(it);
-          const dupWarning = dup ? ('<div style="font-size:10.5px;color:var(--coral);font-weight:700;margin:-3px 0 6px;">⚠ '+t('duplicate_exists')+' "'+escapeHtml(dup.opis)+' '+fmtNum(dup.iznos)+' '+dup.valuta+'" '+t('on_date')+' '+dmFromISO(dup.datum)+' - '+t('possible_duplicate')+'</div>') : '';
+          const dupWarning = dup ? ('<div style="font-size:10.5px;color:var(--coral);font-weight:700;margin:-3px 0 6px;">⚠ '+t('duplicate_exists')+' "'+escapeHtml(dup.opis)+' '+fmtNum(dup.iznos)+' '+dup.valuta.toLowerCase()+'" '+t('on_date')+' '+dmFromISO(dup.datum)+' - '+t('possible_duplicate')+'</div>') : '';
           return dupWarning +
           '<div class="row">'+
           '<input class="f-opis" value="'+escapeHtml(it.opis)+'" oninput="editPendingField('+idx+',\'opis\',this.value)">'+
@@ -1139,7 +1152,7 @@ function render(){
     '<button class="'+(viewMode==='naziv'?'active':'')+'" onclick="setViewMode(\'naziv\')">'+t('view_by_name')+'</button>'+
     '</div></div></div>'+
     '<div class="tb-row" style="margin-top:7px;">'+
-    (groupKeys.length>0 ? ('<div class="tr2-total"><span class="tr2-label">'+entries.length+' '+t('items_short')+'</span><span class="tr2-val num">'+fmtAmt(grandTotal)+' '+(dispCur||'')+'</span></div>') : '')+
+    (groupKeys.length>0 ? ('<div class="tr2-total"><span class="tr2-label">'+entries.length+' '+t('items_short')+'</span><span class="tr2-val num">'+fmtAmt(grandTotal)+' '+((dispCur||'').toLowerCase())+'</span></div>') : '')+
     '</div>'+
     '</div>'+
     '<div class="list-area">'+listHtml+
@@ -1172,7 +1185,7 @@ function buildAllProjectsSummary(){
 }
 async function askAIAboutExpenses(question, chatHistory){
   const apiKey = getApiKey();
-  if(!apiKey){ throw new Error('Nije unet Gemini API ključ. Idi u Podešavanja (⚙) i unesi ga.'); }
+  if(!apiKey){ throw new Error('nije unet Gemini API ključ. idi u podešavanja (⚙) i unesi ga.'); }
   const appLang = resolveAppLanguage();
   const targetLangName = appLang==='sr-RS' ? 'srpski' : 'engleski';
   const dataSummary = JSON.stringify(buildAllProjectsSummary());
@@ -1218,7 +1231,7 @@ Pravila za JSON u AKCIJA bloku (mora biti validan JSON niz, čak i za jednu stav
     });
   } catch(e){
     clearTimeout(timeoutId);
-    if(e.name==='AbortError') throw new Error('AI ne odgovara (isteklo vreme). Pokušaj ponovo.');
+    if(e.name==='AbortError') throw new Error('AI ne odgovara (isteklo vreme). pokušaj ponovo.');
     throw new Error('Ne mogu da se povežem sa AI servisom: '+e.message);
   }
   clearTimeout(timeoutId);
@@ -1258,12 +1271,12 @@ function describeAIAction(act){
   const projName = proj ? proj.name : '?';
   if(act.tip==='dodaj'){
     const f = act.polja||{};
-    return t('ai_action_add')+': "'+(f.opis||'')+'" '+fmtNum(f.iznos||0)+' '+(f.valuta||'')+(f.kategorija?' · '+f.kategorija:'')+(f.datum?' ('+dmFromISO(f.datum)+')':'')+' — '+projName;
+    return t('ai_action_add')+': "'+(f.opis||'')+'" '+fmtNum(f.iznos||0)+' '+(f.valuta||'').toLowerCase()+(f.kategorija?' · '+f.kategorija:'')+(f.datum?' ('+dmFromISO(f.datum)+')':'')+' — '+projName;
   }
   const e = lsGet('entries:'+act.projekat_id);
   const list = (e && e.value) ? JSON.parse(e.value) : [];
   const item = list.find(it=>it.id===act.stavka_id);
-  const itemDesc = item ? (item.opis+' '+fmtNum(item.iznos)+' '+item.valuta+' ('+dmFromISO(item.datum)+')') : (act.stavka_id||'?');
+  const itemDesc = item ? (item.opis+' '+fmtNum(item.iznos)+' '+item.valuta.toLowerCase()+' ('+dmFromISO(item.datum)+')') : (act.stavka_id||'?');
   if(act.tip==='obrisi'){
     return t('ai_action_delete')+': "'+itemDesc+'" — '+projName;
   }
@@ -1821,7 +1834,7 @@ function saveEntryFromModal(id){
   const opis=document.getElementById('editOpis').value.trim();
   const iznos=parseFloat(document.getElementById('editIznos').value)||0;
   const valuta=document.getElementById('editValuta').value.trim().toUpperCase();
-  const kategorija=document.getElementById('editKategorija').value.trim()||'Ostalo';
+  const kategorija=document.getElementById('editKategorija').value.trim()||'ostalo';
   const napomena=document.getElementById('editNapomena').value.trim();
   closeModal();
   updateEntry(id, {datum: isoFromParts(d,m,y), opis, iznos, valuta, kategorija, napomena});
@@ -1847,9 +1860,9 @@ function exportXlsx(){
   const headerStyle = { font:{bold:true, sz:10, color:{rgb:COL_WHITE}}, fill:{fgColor:{rgb:COL_BLUE}}, alignment:{horizontal:"center", vertical:"center"}, border: fullBorder };
   const groupStyle = { font:{bold:true, sz:10.5, color:{rgb:COL_WHITE}}, fill:{fgColor:{rgb:COL_BLUE}}, border: fullBorder };
   const totalLabelStyle = { font:{bold:true, color:{rgb:COL_GOLD_TXT}}, fill:{fgColor:{rgb:COL_GOLD_BG}}, border: fullBorder };
-  const totalValStyle = { font:{bold:true, color:{rgb:COL_GOLD_TXT}}, fill:{fgColor:{rgb:COL_GOLD_BG}}, alignment:{horizontal:"right"}, border: fullBorder, numFmt:"0.00" };
+  const totalValStyle = { font:{bold:true, color:{rgb:COL_GOLD_TXT}}, fill:{fgColor:{rgb:COL_GOLD_BG}}, alignment:{horizontal:"right"}, border: fullBorder, numFmt:"#,##0.00" };
   const grandStyle = { font:{bold:true, sz:12, color:{rgb:COL_WHITE}}, fill:{fgColor:{rgb:COL_BLUE}}, border: fullBorder };
-  const grandValStyle = { font:{bold:true, sz:12, color:{rgb:COL_AMBER}}, fill:{fgColor:{rgb:COL_BLUE}}, alignment:{horizontal:"right"}, border: fullBorder, numFmt:"0.00" };
+  const grandValStyle = { font:{bold:true, sz:12, color:{rgb:COL_AMBER}}, fill:{fgColor:{rgb:COL_BLUE}}, alignment:{horizontal:"right"}, border: fullBorder, numFmt:"#,##0.00" };
   function rowStyle(alt, alignRight, numFmt){
     const s = { border: fullBorder, protection:{ locked:false } };
     if(alt) s.fill = { fgColor:{rgb:COL_ROW_ALT} };
@@ -1869,7 +1882,7 @@ function exportXlsx(){
   const aoa = [];
   aoa.push(fullRow([proj.name,'','','','','',''], titleStyle));
   aoa.push([]);
-  aoa.push(fullRow(['Datum','Opis','Kategorija','Iznos','Valuta','Iznos u '+dispCur,'Napomena'], headerStyle));
+  aoa.push(fullRow(['datum','opis','kategorija','iznos','valuta','iznos u '+dispCur.toLowerCase(),'napomena'], headerStyle));
 
   const merges = [{ s:{r:0,c:0}, e:{r:0,c:6} }];
   const dayTotalRows = []; // excel (1-based) redovi sa "Ukupno [datum]" formulama
@@ -1889,16 +1902,16 @@ function exportXlsx(){
       const rowNum = aoa.length+1; // 1-based excel red koji upravo gradimo
       let fCell;
       if(e.valuta===dispCur){
-        fCell = xf('D'+rowNum, rowStyle(alt, true, "0.00"), e.iznos);
+        fCell = xf('D'+rowNum, rowStyle(alt, true, "#,##0.00"), e.iznos);
       } else {
         const factor = convert(1, e.valuta, dispCur);
         fCell = factor!==null
-          ? xf('D'+rowNum+'*'+factor, rowStyle(alt, true, "0.00"), Math.round(e.iznos*factor*100)/100)
+          ? xf('D'+rowNum+'*'+factor, rowStyle(alt, true, "#,##0.00"), Math.round(e.iznos*factor*100)/100)
           : xc('', rowStyle(alt, true));
       }
       aoa.push([
         xc(dmFromISO(e.datum), rowStyle(alt)), xc(e.opis, rowStyle(alt)), xc(e.kategorija||'', rowStyle(alt)),
-        xc(e.iznos, rowStyle(alt, true, "0.00")), xc(e.valuta, rowStyle(alt)),
+        xc(e.iznos, rowStyle(alt, true, "#,##0.00")), xc((e.valuta||'').toLowerCase(), rowStyle(alt)),
         fCell,
         xc(e.napomena||'', rowStyle(alt))
       ]);
@@ -1906,7 +1919,7 @@ function exportXlsx(){
     const lastItemExcelRow = aoa.length; // 1-based
     const totalRowIdx = aoa.length; // 0-based indeks reda koji sad dodajemo
     aoa.push([
-      xc('', totalLabelStyle), xc('Ukupno '+dmFromISO(date), totalLabelStyle), xc('', totalLabelStyle),
+      xc('', totalLabelStyle), xc('ukupno '+dmFromISO(date), totalLabelStyle), xc('', totalLabelStyle),
       xc('', totalLabelStyle), xc('', totalLabelStyle),
       xf('SUM(F'+firstItemExcelRow+':F'+lastItemExcelRow+')', totalValStyle, Math.round(dayTotal*100)/100),
       xc('', totalLabelStyle)
@@ -1920,7 +1933,7 @@ function exportXlsx(){
   merges.push({ s:{r:grandRowIdx,c:0}, e:{r:grandRowIdx,c:4} });
   const grandFormula = dayTotalRows.map(r=>'F'+r).join('+') || '0';
   aoa.push([
-    xc('', grandStyle), xc('UKUPNO PROJEKAT', grandStyle), xc('', grandStyle), xc('', grandStyle), xc('', grandStyle),
+    xc('', grandStyle), xc('ukupno projekat', grandStyle), xc('', grandStyle), xc('', grandStyle), xc('', grandStyle),
     xf(grandFormula, grandValStyle, Math.round(grand*100)/100), xc('', grandStyle)
   ]);
 
@@ -1941,7 +1954,35 @@ function exportXlsx(){
   ws['!rows'] = [{hpt:26}];
   ws['!protect'] = {};
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, proj.name.slice(0,28) || 'Troskovi');
+  XLSX.utils.book_append_sheet(wb, ws, proj.name.slice(0,28) || 'troskovi');
+
+  // Drugi list: ravna tabela sa Excel filterima na zaglavlju (slobodno sortiranje/filtriranje)
+  const sortedEntries = [...entries].sort((a,b)=>a.datum.localeCompare(b.datum));
+  const flatAoa = [];
+  flatAoa.push(fullRow(['datum','opis','kategorija','iznos','valuta','iznos u '+dispCur.toLowerCase(),'napomena'], headerStyle));
+  sortedEntries.forEach((e,i)=>{
+    const conv = convert(e.iznos, e.valuta, dispCur);
+    const alt = i%2===1;
+    flatAoa.push([
+      xc(dmFromISO(e.datum), rowStyle(alt)), xc(e.opis, rowStyle(alt)), xc(e.kategorija||'', rowStyle(alt)),
+      xc(e.iznos, rowStyle(alt, true, "#,##0.00")), xc((e.valuta||'').toLowerCase(), rowStyle(alt)),
+      xc(conv!==null?Math.round(conv*100)/100:'', rowStyle(alt, true, "#,##0.00")),
+      xc(e.napomena||'', rowStyle(alt))
+    ]);
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet(flatAoa);
+  const colMaxLen2 = [0,0,0,0,0,0,0];
+  flatAoa.forEach(row=>{
+    row.forEach((cell,cidx)=>{
+      if(!cell || cell.v===undefined || cell.v===null || cell.v==='') return;
+      const s = String(cell.v);
+      if(s.length > colMaxLen2[cidx]) colMaxLen2[cidx] = s.length;
+    });
+  });
+  ws2['!cols'] = colMaxLen2.map((len,i)=> ({ wch: Math.min(maxW[i], Math.max(minW[i], len+2)) }));
+  ws2['!autofilter'] = { ref: XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:flatAoa.length-1, c:6} }) };
+  XLSX.utils.book_append_sheet(wb, ws2, 'filter');
+
   const safeName = (proj.name||'troskovi').trim().replace(/[\\/:*?"<>|]+/g,'_').replace(/\s+/g,'_');
   const fname = safeName+'_'+todayISO()+'.xlsx';
   XLSX.writeFile(wb, fname);
