@@ -282,6 +282,16 @@ const I18N = {
     save: 'sačuvaj',
     section_data: 'podaci',
     export_project_excel: 'izvezi ovaj projekat u Excel',
+    import_excel: 'uvezi iz Excela',
+    excel_import_bad_columns: 'fajl ne izgleda kao izvoz iz ove aplikacije (nedostaju kolone opis/iznos).',
+    excel_import_no_items: 'nije pronađena nijedna validna stavka u fajlu.',
+    excel_import_generic_error: 'greška pri čitanju Excel fajla.',
+    excel_import_found_title: 'pronađeno',
+    excel_import_found_items: 'stavki u fajlu',
+    excel_import_into_current: 'u ovaj projekat',
+    excel_import_as_new: 'novi projekat',
+    excel_import_done: 'stavki uvezeno.',
+    excel_import_new_project_name: 'uvezen projekat',
     backup_export: 'rezervna kopija - izvezi (svi projekti)',
     backup_import: 'rezervna kopija - uvezi',
     backup_hint: 'rezervna kopija čuva sve projekte odjednom - sačuvaj je povremeno (npr. u Google Drive) da ne izgubiš podatke.',
@@ -407,6 +417,16 @@ const I18N = {
     save: 'save',
     section_data: 'data',
     export_project_excel: 'export this project to Excel',
+    import_excel: 'import from Excel',
+    excel_import_bad_columns: 'this file doesn\'t look like an export from this app (missing description/amount columns).',
+    excel_import_no_items: 'no valid items found in the file.',
+    excel_import_generic_error: 'error reading the Excel file.',
+    excel_import_found_title: 'found',
+    excel_import_found_items: 'items in the file',
+    excel_import_into_current: 'into this project',
+    excel_import_as_new: 'new project',
+    excel_import_done: 'items imported.',
+    excel_import_new_project_name: 'imported project',
     backup_export: 'backup - export (all projects)',
     backup_import: 'backup - import',
     backup_hint: 'the backup saves all projects at once - save it occasionally (e.g. to Google Drive) so you don\'t lose your data.',
@@ -510,6 +530,7 @@ function t(key){
 function uid(p){ return p+Date.now()+Math.random().toString(36).slice(2,7); }
 function todayISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function dmFromISO(iso){ const [y,m,d]=iso.split('-'); return d+'.'+m; }
+function dmyFromISO(iso){ const [y,m,d]=iso.split('-'); return d+'.'+m+'.'+y; }
 function dmyFromISO(iso){ const [y,m,d]=iso.split('-'); return d+'.'+m+'.'+y; }
 function dmyFromTimestamp(ts){
   const d = new Date(ts);
@@ -1692,6 +1713,10 @@ function submitQuickNew(){
   createProject(name, lastLang);
 }
 function appendModalBackdrop(backdrop){
+  const existingSame = document.getElementById(backdrop.id);
+  if(existingSame) existingSame.remove();
+  const anyOldModal = document.getElementById('modalBackdrop');
+  if(anyOldModal && backdrop.id !== 'modalBackdrop') anyOldModal.remove();
   document.body.appendChild(backdrop);
   document.body.style.overflow = 'hidden';
   try{ history.pushState({modalOpen:true}, '', location.href); }catch(e){}
@@ -1758,9 +1783,11 @@ function openProjectSettings(){
     '<div class="settings-section-label">'+t('section_data')+'</div>'+
     '<div class="settings-card">'+
     '<button class="settings-row" onclick="exportXlsx()"><span class="row-icon">⬇</span><span class="row-label">'+t('export_project_excel')+'</span><span class="chevron">›</span></button>'+
+    '<button class="settings-row" onclick="triggerImportExcel()"><span class="row-icon">📥</span><span class="row-label">'+t('import_excel')+'</span><span class="chevron">›</span></button>'+
     '<button class="settings-row" onclick="exportBackup()"><span class="row-icon">💾</span><span class="row-label">'+t('backup_export')+'</span><span class="chevron">›</span></button>'+
     '<button class="settings-row" onclick="triggerImportBackup()"><span class="row-icon">📂</span><span class="row-label">'+t('backup_import')+'</span><span class="chevron">›</span></button>'+
     '</div>'+
+    '<input type="file" id="excelImportInput" accept="*/*" style="display:none" onchange="handleExcelImportFile(this)">'+
     '<input type="file" id="backupFileInput" accept=".json" style="display:none" onchange="handleImportFile(this)">'+
     '<div class="settings-hint">'+t('backup_hint')+'</div>'+
     '<div class="settings-card" style="margin-top:10px;">'+
@@ -1911,6 +1938,105 @@ function deleteEntryFromModal(id){
 }
 
 /* ---------- EXPORT ---------- */
+/* ---------- UVOZ IZ EXCELA ---------- */
+let pendingExcelImportItems = null;
+let pendingExcelImportSourceName = '';
+
+function triggerImportExcel(){
+  const el = document.getElementById('excelImportInput');
+  if(el) el.click();
+}
+function parseDdMmYyyy(s){
+  const m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec((s||'').trim());
+  if(!m) return null;
+  const dd = m[1].padStart(2,'0'), mm = m[2].padStart(2,'0'), yyyy = m[3];
+  return yyyy+'-'+mm+'-'+dd;
+}
+function handleExcelImportFile(inputEl){
+  const file = inputEl.files && inputEl.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    let items = [];
+    try{
+      const data = new Uint8Array(ev.target.result);
+      const wb = XLSX.read(data, { type:'array' });
+      const sheetName = wb.SheetNames.find(n=>n.toLowerCase()==='filter') || wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:'' });
+      if(rows.length<2){ showBanner(t('excel_import_no_items'), 'error'); inputEl.value=''; return; }
+      const headerRow = rows[0].map(h=>String(h).trim().toLowerCase());
+      const idx = {
+        datum: headerRow.indexOf('datum'),
+        opis: headerRow.indexOf('opis'),
+        kategorija: headerRow.indexOf('kategorija'),
+        iznos: headerRow.indexOf('iznos'),
+        valuta: headerRow.indexOf('valuta'),
+        napomena: headerRow.indexOf('napomena')
+      };
+      if(idx.opis<0 || idx.iznos<0){
+        showBanner(t('excel_import_bad_columns'), 'error'); inputEl.value=''; return;
+      }
+      for(let i=1;i<rows.length;i++){
+        const r = rows[i];
+        if(!r || r.length===0) continue;
+        const opis = idx.opis>=0 ? String(r[idx.opis]||'').trim() : '';
+        const iznosRaw = idx.iznos>=0 ? r[idx.iznos] : '';
+        const iznos = (typeof iznosRaw === 'number') ? iznosRaw : parseFloat(String(iznosRaw).replace(/\./g,'').replace(',', '.').replace(/[^0-9.\-]/g,''));
+        if(!opis || isNaN(iznos)) continue;
+        const datumRaw = idx.datum>=0 ? String(r[idx.datum]||'') : '';
+        const datum = parseDdMmYyyy(datumRaw) || todayISO();
+        const valuta = idx.valuta>=0 ? String(r[idx.valuta]||'').trim().toUpperCase() : (displayCurrency()||'RSD');
+        const kategorija = idx.kategorija>=0 ? String(r[idx.kategorija]||'').trim() : '';
+        const napomena = idx.napomena>=0 ? String(r[idx.napomena]||'').trim() : '';
+        items.push({ datum, opis, iznos, valuta, kategorija, napomena });
+      }
+    } catch(err){
+      showBanner(t('excel_import_generic_error'), 'error');
+      inputEl.value=''; return;
+    }
+    inputEl.value='';
+    if(items.length===0){ showBanner(t('excel_import_no_items'), 'error'); return; }
+    openExcelImportChoice(items, file.name);
+  };
+  reader.onerror = function(){
+    showBanner(t('excel_import_generic_error'), 'error');
+    inputEl.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+function openExcelImportChoice(items, sourceName){
+  pendingExcelImportItems = items;
+  pendingExcelImportSourceName = sourceName;
+  const backdrop=document.createElement('div'); backdrop.className='modal-backdrop'; backdrop.id='modalBackdrop';
+  backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button>'+
+    '<h2 style="margin-bottom:4px;">'+t('excel_import_found_title')+' '+items.length+' '+t('excel_import_found_items')+'</h2>'+
+    '<div class="attach-options">'+
+    '<button class="attach-opt" onclick="importExcelIntoCurrent()"><span class="attach-icon">📥</span><span>'+t('excel_import_into_current')+'</span></button>'+
+    '<button class="attach-opt" onclick="importExcelAsNewProject()"><span class="attach-icon">🆕</span><span>'+t('excel_import_as_new')+'</span></button>'+
+    '</div></div>';
+  appendModalBackdrop(backdrop);
+  backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
+}
+function importExcelIntoCurrent(){
+  const items = pendingExcelImportItems;
+  closeModal();
+  if(!items) return;
+  commitEntries(items);
+  showBanner(items.length+' '+t('excel_import_done'), 'info');
+  pendingExcelImportItems = null;
+}
+function importExcelAsNewProject(){
+  const items = pendingExcelImportItems;
+  const sourceName = pendingExcelImportSourceName;
+  closeModal();
+  if(!items) return;
+  const name = (sourceName||'').replace(/\.xlsx$/i,'').replace(/[_]+/g,' ').trim() || t('excel_import_new_project_name');
+  createProject(name, 'auto');
+  commitEntries(items);
+  showBanner(items.length+' '+t('excel_import_done'), 'info');
+  pendingExcelImportItems = null;
+}
 function exportXlsx(){
   if(entries.length===0){ showBanner(t('no_items_to_export')); return; }
   const proj = currentProject();
@@ -1976,7 +2102,7 @@ function exportXlsx(){
           : xc('', rowStyle(alt, true));
       }
       aoa.push([
-        xc(dmFromISO(e.datum), rowStyle(alt)), xc(e.opis, rowStyle(alt)), xc(e.kategorija||'', rowStyle(alt)),
+        xc(dmyFromISO(e.datum), rowStyle(alt)), xc(e.opis, rowStyle(alt)), xc(e.kategorija||'', rowStyle(alt)),
         xc(e.iznos, rowStyle(alt, true, "#,##0.00")), xc((e.valuta||'').toLowerCase(), rowStyle(alt)),
         fCell,
         xc(e.napomena||'', rowStyle(alt))
@@ -2030,7 +2156,7 @@ function exportXlsx(){
     const conv = convert(e.iznos, e.valuta, dispCur);
     const alt = i%2===1;
     flatAoa.push([
-      xc(dmFromISO(e.datum), rowStyle(alt)), xc(e.opis, rowStyle(alt)), xc(e.kategorija||'', rowStyle(alt)),
+      xc(dmyFromISO(e.datum), rowStyle(alt)), xc(e.opis, rowStyle(alt)), xc(e.kategorija||'', rowStyle(alt)),
       xc(e.iznos, rowStyle(alt, true, "#,##0.00")), xc((e.valuta||'').toLowerCase(), rowStyle(alt)),
       xc(conv!==null?Math.round(conv*100)/100:'', rowStyle(alt, true, "#,##0.00")),
       xc(e.napomena||'', rowStyle(alt))
