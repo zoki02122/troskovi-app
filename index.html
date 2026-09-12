@@ -75,6 +75,8 @@
   #statusBanner.error{ background:#B3432D; color:#fff; }
   #statusBanner.info{ background:#163B69; color:#fff; }
   #statusBanner .closeBtn{ margin-left:auto; flex:none; background:none; border:none; color:#fff; font-size:16px; cursor:pointer; opacity:0.8; }
+  .backup-reminder-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; background:#B3432D; color:#fff; font-size:12px; font-weight:600; padding:8px 10px; border-radius:9px; margin-bottom:8px; }
+  .backup-reminder-row button{ flex:none; background:rgba(255,255,255,0.18); color:#fff; border:1px solid rgba(255,255,255,0.35); padding:6px 11px; border-radius:7px; font-weight:700; font-size:11.5px; font-family:inherit; cursor:pointer; }
   #undoToast{
     position:fixed; left:14px; right:14px; bottom:172px; max-width:532px; margin:0 auto; z-index:45;
     background:#20242B; color:#fff; border-radius:12px; padding:11px 14px;
@@ -283,6 +285,13 @@ const I18N = {
     backup_export: 'rezervna kopija - izvezi (svi projekti)',
     backup_import: 'rezervna kopija - uvezi',
     backup_hint: 'rezervna kopija čuva sve projekte odjednom - sačuvaj je povremeno (npr. u Google Drive) da ne izgubiš podatke.',
+    backup_interval_label: 'podseti me na svakih (dana)',
+    backup_interval_hint: 'kad prođe ovoliko dana od poslednje rezervne kopije, gore će se pojaviti podsetnik.',
+    last_backup_label: 'poslednja rezervna kopija',
+    last_backup_never: 'nikad',
+    backup_reminder_never: 'Nikad nisi napravio rezervnu kopiju podataka.',
+    backup_reminder_days: 'Prošlo je {n} dana od poslednje rezervne kopije.',
+    backup_reminder_btn: 'izvezi bekap',
     section_ai_key: 'AI ključ',
     gemini_key_label: 'Google Gemini API ključ',
     save_key: 'sačuvaj ključ',
@@ -401,6 +410,13 @@ const I18N = {
     backup_export: 'backup - export (all projects)',
     backup_import: 'backup - import',
     backup_hint: 'the backup saves all projects at once - save it occasionally (e.g. to Google Drive) so you don\'t lose your data.',
+    backup_interval_label: 'remind me every (days)',
+    backup_interval_hint: 'once this many days pass since the last backup, a reminder will appear at the top.',
+    last_backup_label: 'last backup',
+    last_backup_never: 'never',
+    backup_reminder_never: 'You have never made a backup of your data.',
+    backup_reminder_days: '{n} days have passed since the last backup.',
+    backup_reminder_btn: 'export backup',
     section_ai_key: 'AI key',
     gemini_key_label: 'Google Gemini API key',
     save_key: 'save key',
@@ -578,6 +594,46 @@ function performUndo(){
 /* ---------- PERSISTENCE (localStorage - radi trajno u Chrome-u) ---------- */
 function lsGet(key){ try{ const v = localStorage.getItem(key); return v===null ? null : {value:v}; }catch(e){ return null; } }
 function lsSet(key,val){ try{ localStorage.setItem(key, val); return {value:val}; }catch(e){ return null; } }
+
+/* ---------- BACKUP REMINDER ---------- */
+function getBackupIntervalDays(){
+  const v = lsGet('app:backupIntervalDays');
+  const n = v ? parseInt(v.value) : NaN;
+  return (n && n > 0) ? n : 7;
+}
+function setBackupIntervalDays(days){ lsSet('app:backupIntervalDays', String(days)); }
+function getLastBackupDate(){
+  const v = lsGet('app:lastBackup');
+  return v ? new Date(v.value) : null;
+}
+function markBackupDone(){ lsSet('app:lastBackup', new Date().toISOString()); }
+function daysSince(date){ return Math.floor((Date.now() - date.getTime()) / 86400000); }
+function lastBackupDisplay(){
+  const last = getLastBackupDate();
+  return last ? dmyFromISO(todayISOFromDate(last)) : t('last_backup_never');
+}
+function todayISOFromDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function backupReminderHtml(){
+  const last = getLastBackupDate();
+  const interval = getBackupIntervalDays();
+  let msg = null;
+  if(!last){
+    msg = t('backup_reminder_never');
+  } else {
+    const d = daysSince(last);
+    if(d >= interval) msg = t('backup_reminder_days').replace('{n}', d);
+  }
+  if(!msg) return '';
+  return '<div class="backup-reminder-row">'+
+    '<span>'+escapeHtml(msg)+'</span>'+
+    '<button onclick="exportBackup()">'+t('backup_reminder_btn')+'</button>'+
+    '</div>';
+}
+function saveBackupInterval(val){
+  const n = parseInt(val) || 7;
+  setBackupIntervalDays(n);
+  render();
+}
 function lsDelete(key){ try{ localStorage.removeItem(key); }catch(e){} }
 
 async function loadAll(){
@@ -1133,6 +1189,7 @@ function render(){
 
   app.innerHTML =
     '<div class="topbar">'+
+    backupReminderHtml()+
     '<div class="tb-row">'+
     '<div class="project-switch" style="flex:1;" onclick="openProjectSwitcher()">'+
     '<span class="name">'+escapeHtml(proj.name)+'</span>'+
@@ -1579,6 +1636,10 @@ function exportBackup(){
   a.click();
   document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  markBackupDone();
+  render();
+  const hintEl = document.getElementById('lastBackupHint');
+  if(hintEl) hintEl.textContent = t('last_backup_label')+': '+lastBackupDisplay();
   showBanner(t('backup_downloaded'), 'info');
 }
 function triggerImportBackup(){
@@ -1702,6 +1763,11 @@ function openProjectSettings(){
     '</div>'+
     '<input type="file" id="backupFileInput" accept=".json" style="display:none" onchange="handleImportFile(this)">'+
     '<div class="settings-hint">'+t('backup_hint')+'</div>'+
+    '<div class="settings-card" style="margin-top:10px;">'+
+    '<div class="settings-field"><label>'+t('backup_interval_label')+'</label><input type="number" min="1" id="backupIntervalInput" value="'+getBackupIntervalDays()+'" oninput="saveBackupInterval(this.value)"></div>'+
+    '</div>'+
+    '<div class="settings-hint">'+t('backup_interval_hint')+'</div>'+
+    '<div class="settings-hint" id="lastBackupHint">'+t('last_backup_label')+': '+lastBackupDisplay()+'</div>'+
     '</div>'+
 
     '<div class="settings-section">'+
