@@ -1333,7 +1333,7 @@ function openChatMode(){
 }
 function closeChatMode(){
   const el = document.getElementById('chatOverlayRoot');
-  if(el) el.remove();
+  if(el){ el.remove(); suppressPopstateCount++; try{ history.back(); }catch(e){ suppressPopstateCount--; } }
 }
 function parseAIAction(raw){
   const marker = /###AKCIJA###([\s\S]*?)###KRAJ###/;
@@ -1725,17 +1725,27 @@ function releaseScrollLockIfNoModals(){
   const anyOpen = document.getElementById('modalBackdrop') || document.getElementById('confirmBackdrop');
   if(!anyOpen){ document.body.style.overflow = ''; }
 }
+let suppressPopstateCount = 0;
 function closeModal(){
   const b=document.getElementById('modalBackdrop');
-  if(b) b.remove();
+  if(b){ b.remove(); suppressPopstateCount++; try{ history.back(); }catch(e){ suppressPopstateCount--; } }
   releaseScrollLockIfNoModals();
 }
 window.addEventListener('popstate', function(){
-  const m = document.getElementById('modalBackdrop'); if(m) m.remove();
-  const c = document.getElementById('confirmBackdrop'); if(c) c.remove();
-  const ch = document.getElementById('chatOverlayRoot'); if(ch) ch.remove();
+  if(suppressPopstateCount>0){ suppressPopstateCount--; return; }
+  if(exitConfirmed){ return; }
+  const m = document.getElementById('modalBackdrop');
+  const c = document.getElementById('confirmBackdrop');
+  const ch = document.getElementById('chatOverlayRoot');
+  const wasSomethingOpen = !!m || !!c || !!ch || searchOpen;
+  if(m) m.remove();
+  if(c) c.remove();
+  if(ch) ch.remove();
   if(searchOpen){ searchOpen = false; searchQuery=''; render(); }
   releaseScrollLockIfNoModals();
+  if(wasSomethingOpen) return;
+  exitTrapArmed = false;
+  showExitConfirm();
 });
 let __confirmYesAction = null;
 function showConfirmModal(message, onYes, yesLabel, noLabel, yesClass){
@@ -1755,11 +1765,53 @@ function showConfirmModal(message, onYes, yesLabel, noLabel, yesClass){
 }
 function closeConfirmModal(){
   const b=document.getElementById('confirmBackdrop');
-  if(b) b.remove();
+  if(b){ b.remove(); suppressPopstateCount++; try{ history.back(); }catch(e){ suppressPopstateCount--; } }
   __confirmYesAction=null;
   releaseScrollLockIfNoModals();
 }
 function runConfirmYes(){ const fn=__confirmYesAction; closeConfirmModal(); if(fn) fn(); }
+
+/* ---------- EXIT CONFIRMATION ---------- */
+let exitTrapArmed = false;
+let exitConfirmed = false;
+function armExitTrap(){
+  if(!exitTrapArmed){
+    try{ history.pushState({exitTrap:true}, '', location.href); }catch(e){}
+    exitTrapArmed = true;
+  }
+}
+document.addEventListener('pointerdown', function onceP(){
+  armExitTrap();
+  document.removeEventListener('pointerdown', onceP);
+}, {once:true});
+document.addEventListener('keydown', function onceK(){
+  armExitTrap();
+  document.removeEventListener('keydown', onceK);
+}, {once:true});
+function showExitConfirm(){
+  const backdrop=document.createElement('div'); backdrop.className='modal-backdrop small-modal'; backdrop.id='exitBackdrop';
+  backdrop.innerHTML = '<div class="modal" style="text-align:center;">'+
+    '<div style="font-size:56px; line-height:1; margin-bottom:8px;">🚪</div>'+
+    '<h2>Izlazak iz aplikacije</h2>'+
+    '<p style="font-size:14.5px; color:var(--text); line-height:1.5; margin:0 0 20px;">Da li sigurno želite da izađete?</p>'+
+    '<div class="modal-actions">'+
+    '<button class="cancel-btn" id="exitStayBtn">↩️ Ostani</button>'+
+    '<button class="delete-btn" id="exitLeaveBtn">🚪 Izađi</button>'+
+    '</div></div>';
+  document.body.appendChild(backdrop);
+  document.body.style.overflow = 'hidden';
+  document.getElementById('exitStayBtn').onclick = ()=>{
+    backdrop.remove();
+    releaseScrollLockIfNoModals();
+    armExitTrap();
+  };
+  document.getElementById('exitLeaveBtn').onclick = ()=>{
+    backdrop.remove();
+    releaseScrollLockIfNoModals();
+    exitConfirmed = true;
+    try{ history.back(); }catch(e){}
+  };
+}
 
 
 /* ---------- MODAL: project settings ---------- */
