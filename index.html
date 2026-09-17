@@ -218,11 +218,16 @@ function toggleSearch(){
   if(!searchOpen){ searchQuery=''; }
   render();
   if(searchOpen){
-    try{ history.pushState({searchOpen:true}, '', location.href); }catch(e){}
+    pushOverlayEntry(closeSearchViaBack);
     setTimeout(()=>{ const el=document.getElementById('searchInput'); if(el) el.focus(); },100);
-  } else if(wasOpen && window.history.state && window.history.state.searchOpen){
-    try{ history.back(); }catch(e){}
+  } else if(wasOpen){
+    popOverlayEntry(closeSearchViaBack);
   }
+}
+function closeSearchViaBack(){
+  searchOpen = false;
+  searchQuery = '';
+  render();
 }
 function setSearchQuery(v){
   searchQuery = v;
@@ -1328,11 +1333,11 @@ let chatMessages = [];
 function openChatMode(){
   chatMessages = [];
   renderChatOverlay();
-  try{ history.pushState({chatOpen:true}, '', location.href); }catch(e){}
+  pushOverlayEntry(closeChatMode);
 }
 function closeChatMode(){
   const el = document.getElementById('chatOverlayRoot');
-  if(el){ el.remove(); suppressPopstateCount++; try{ history.back(); }catch(e){ suppressPopstateCount--; } }
+  if(el){ el.remove(); popOverlayEntry(closeChatMode); }
 }
 function parseAIAction(raw){
   const marker = /###AKCIJA###([\s\S]*?)###KRAJ###/;
@@ -1588,7 +1593,7 @@ function openProjectSwitcher(){
     '</div>'+
     '<div id="projListArea" style="padding-top:4px;"></div>'+
     '</div>';
-  appendModalBackdrop(backdrop);
+  appendModalBackdrop(backdrop, closeModal);
   backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
   selectMode = false; selectedProjectIds = new Set();
   renderProjectList();
@@ -1598,7 +1603,7 @@ function openNewProjectForm(){
   backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button><h2>'+t('new_project')+'</h2>'+
     '<div class="field"><label>'+t('project_name')+'</label><input type="text" id="quickNewName" placeholder="'+t('new_project_placeholder')+'" maxlength="40" onkeydown="if(event.key===\'Enter\'){ event.preventDefault(); submitQuickNew(); }"></div>'+
     '<div class="modal-actions"><button class="cancel-btn" onclick="closeModal()">'+t('cancel')+'</button><button class="create-btn" onclick="submitQuickNew()">'+t('create')+'</button></div></div>';
-  appendModalBackdrop(backdrop);
+  appendModalBackdrop(backdrop, closeModal);
   backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
   setTimeout(()=>{ const el=document.getElementById('quickNewName'); if(el) el.focus(); }, 150);
 }
@@ -1614,7 +1619,7 @@ function openAttachMenu(){
     '<input type="file" id="photoInputGallery" accept="image/*" style="display:none;" onchange="handlePhotoPicked(this)">'+
     '<input type="file" id="photoInputFiles" accept="image/*,.pdf" style="display:none;" onchange="handlePhotoPicked(this)">'+
     '</div>';
-  appendModalBackdrop(backdrop);
+  appendModalBackdrop(backdrop, closeModal);
   backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
 }
 function triggerPhotoInput(kind){
@@ -1711,38 +1716,42 @@ function submitQuickNew(){
   closeModal();
   createProject(name, lastLang);
 }
-function appendModalBackdrop(backdrop){
+let overlayStack = [];
+let suppressPopstateCount = 0;
+function pushOverlayEntry(closeFn){
+  overlayStack.push(closeFn);
+  try{ history.pushState({modalOpen:true}, '', location.href); }catch(e){}
+}
+function popOverlayEntry(closeFn){
+  const idx = overlayStack.lastIndexOf(closeFn);
+  if(idx!==-1) overlayStack.splice(idx,1);
+  suppressPopstateCount++;
+  try{ history.back(); }catch(e){ suppressPopstateCount--; }
+}
+function appendModalBackdrop(backdrop, closeFn){
   const existingSame = document.getElementById(backdrop.id);
   if(existingSame) existingSame.remove();
-  const anyOldModal = document.getElementById('modalBackdrop');
-  if(anyOldModal && backdrop.id !== 'modalBackdrop') anyOldModal.remove();
   document.body.appendChild(backdrop);
   document.body.style.overflow = 'hidden';
-  try{ history.pushState({modalOpen:true}, '', location.href); }catch(e){}
+  pushOverlayEntry(closeFn);
 }
 function releaseScrollLockIfNoModals(){
   const anyOpen = document.getElementById('modalBackdrop') || document.getElementById('confirmBackdrop');
   if(!anyOpen){ document.body.style.overflow = ''; }
 }
-let suppressPopstateCount = 0;
 function closeModal(){
   const b=document.getElementById('modalBackdrop');
-  if(b){ b.remove(); suppressPopstateCount++; try{ history.back(); }catch(e){ suppressPopstateCount--; } }
+  if(b){ b.remove(); popOverlayEntry(closeModal); }
   releaseScrollLockIfNoModals();
 }
 window.addEventListener('popstate', function(){
   if(suppressPopstateCount>0){ suppressPopstateCount--; return; }
   if(exitConfirmed){ return; }
-  const m = document.getElementById('modalBackdrop');
-  const c = document.getElementById('confirmBackdrop');
-  const ch = document.getElementById('chatOverlayRoot');
-  const wasSomethingOpen = !!m || !!c || !!ch || searchOpen;
-  if(m) m.remove();
-  if(c) c.remove();
-  if(ch) ch.remove();
-  if(searchOpen){ searchOpen = false; searchQuery=''; render(); }
-  releaseScrollLockIfNoModals();
-  if(wasSomethingOpen) return;
+  if(overlayStack.length > 0){
+    const fn = overlayStack.pop();
+    fn();
+    return;
+  }
   exitTrapArmed = false;
   showExitConfirm();
 });
@@ -1759,12 +1768,14 @@ function showConfirmModal(message, onYes, yesLabel, noLabel, yesClass){
     '<button class="cancel-btn" onclick="closeConfirmModal()">'+escapeHtml(noLabel)+'</button>'+
     '<button class="'+yesClass+'" onclick="runConfirmYes()">'+escapeHtml(yesLabel)+'</button>'+
     '</div></div>';
-  appendModalBackdrop(backdrop);
+  document.body.appendChild(backdrop);
+  document.body.style.overflow = 'hidden';
+  pushOverlayEntry(closeConfirmModal);
   backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeConfirmModal(); });
 }
 function closeConfirmModal(){
   const b=document.getElementById('confirmBackdrop');
-  if(b){ b.remove(); suppressPopstateCount++; try{ history.back(); }catch(e){ suppressPopstateCount--; } }
+  if(b){ b.remove(); popOverlayEntry(closeConfirmModal); }
   __confirmYesAction=null;
   releaseScrollLockIfNoModals();
 }
@@ -1867,7 +1878,7 @@ function openProjectSettings(){
     '</div></div>'+
 
     '</div>';
-  appendModalBackdrop(backdrop);
+  appendModalBackdrop(backdrop, closeModal);
   backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
 }
 function saveApiKey(){
@@ -1907,7 +1918,7 @@ function openRateModal(curA, curB){
   backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button><h2>'+t('rate_title')+'</h2>'+
     '<div class="field"><label>1 '+a+' = '+t('rate_how_much')+' '+b+'?</label><input type="number" step="0.01" id="rateInput" value="'+(existing||'')+'" placeholder="'+t('rate_placeholder')+'" autofocus onkeydown="if(event.key===\'Enter\'){ event.preventDefault(); setRate(\''+a+'\',\''+b+'\', this.value); }"></div>'+
     '<div class="modal-actions"><button class="cancel-btn" onclick="closeModal()">'+t('cancel')+'</button><button class="create-btn" onclick="setRate(\''+a+'\',\''+b+'\', document.getElementById(\'rateInput\').value)">'+t('save')+'</button></div></div>';
-  appendModalBackdrop(backdrop);
+  appendModalBackdrop(backdrop, closeModal);
   backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
   setTimeout(()=>{ const el=document.getElementById('rateInput'); if(el){ el.focus(); el.select(); } }, 100);
 }
@@ -1921,7 +1932,7 @@ function openCurrencyPairModal(){
     '<div class="field"><label>'+t('first_currency')+'</label><select id="curPickA">'+CURRENCY_OPTIONS.map(c=>'<option value="'+c+'" '+(c===pair[0]?'selected':'')+'>'+c+'</option>').join('')+'</select></div>'+
     '<div class="field"><label>'+t('second_currency')+'</label><select id="curPickB">'+CURRENCY_OPTIONS.map(c=>'<option value="'+c+'" '+(c===pair[1]?'selected':'')+'>'+c+'</option>').join('')+'</select></div>'+
     '<div class="modal-actions"><button class="cancel-btn" onclick="closeModal()">'+t('cancel')+'</button><button class="create-btn" onclick="submitCurrencyPair()">'+t('save')+'</button></div></div>';
-  appendModalBackdrop(backdrop);
+  appendModalBackdrop(backdrop, closeModal);
   backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
 }
 function submitCurrencyPair(){
@@ -1941,7 +1952,7 @@ function openDateModal(){
     '<input class="mm" type="number" id="dtM" value="'+parseInt(m)+'" min="1" max="12" placeholder="MM">'+
     '<input class="yy" type="number" id="dtY" value="'+y+'" min="2000" max="2100" placeholder="GGGG"></div>'+
     '<div class="modal-actions" style="margin-top:16px;"><button class="cancel-btn" onclick="closeModal()">'+t('cancel')+'</button><button class="create-btn" onclick="saveDateModal()">'+t('save')+'</button></div></div>';
-  appendModalBackdrop(backdrop);
+  appendModalBackdrop(backdrop, closeModal);
   backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
 }
 function saveDateModal(){
@@ -1968,7 +1979,7 @@ function openEditEntry(id){
     '<div class="field"><label>'+t('label_note')+'</label><input type="text" id="editNapomena" value="'+escapeHtml(e.napomena||'')+'"></div>'+
     '<div class="modal-actions"><button class="delete-btn" onclick="deleteEntryFromModal(\''+id+'\')">'+t('delete')+'</button>'+
     '<button class="create-btn" onclick="saveEntryFromModal(\''+id+'\')">'+t('save')+'</button></div></div>';
-  appendModalBackdrop(backdrop);
+  appendModalBackdrop(backdrop, closeModal);
   backdrop.addEventListener('click',(ev)=>{ if(ev.target===backdrop) closeModal(); });
 }
 function saveEntryFromModal(id){
@@ -2066,7 +2077,7 @@ function openExcelImportChoice(items, sourceName){
     '<button class="attach-opt" onclick="importExcelIntoCurrent()"><span class="attach-icon">📥</span><span>'+t('excel_import_into_current')+'</span></button>'+
     '<button class="attach-opt" onclick="importExcelAsNewProject()"><span class="attach-icon">🆕</span><span>'+t('excel_import_as_new')+'</span></button>'+
     '</div></div>';
-  appendModalBackdrop(backdrop);
+  appendModalBackdrop(backdrop, closeModal);
   backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
 }
 function importExcelIntoCurrent(){
