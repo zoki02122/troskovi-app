@@ -150,13 +150,12 @@
   .btn-save{ background:var(--gold); color:#fff; flex:1; }
   .batch-remove{ background:#EFEADD; color:var(--text); padding:7px 9px !important; }
 
-  .modal-backdrop{ position:fixed; inset:0; background:rgba(20,20,20,0.5); display:flex; align-items:flex-end; justify-content:center; z-index:30; }
-  .modal-backdrop.small-modal{ align-items:flex-start; padding:70px 16px 0; }
-  .modal-backdrop.small-modal .modal{ border-radius:20px; max-height:none; }
-  .modal{ background:#fff; width:100%; max-width:560px; border-radius:20px 20px 0 0; padding:20px 18px calc(20px + env(safe-area-inset-bottom)); max-height:85vh; overflow-y:auto; overflow-x:hidden; box-sizing:border-box; }
+  .modal-backdrop{ position:fixed; inset:0; background:rgba(20,20,20,0.5); display:flex; align-items:center; justify-content:center; z-index:30; }
+  .modal-backdrop.small-modal{ align-items:center; padding:0; }
+  .modal-backdrop.small-modal .modal{ border-radius:20px; max-height:85vh; }
+  .modal{ background:#fff; width:calc(100% - 32px); max-width:560px; border-radius:20px; padding:20px 18px calc(20px + env(safe-area-inset-bottom)); max-height:85vh; overflow-y:auto; overflow-x:hidden; box-sizing:border-box; position:fixed; top:42%; left:50%; transform:translate(-50%,-50%); margin:0; }
   .modal h2{ margin:0 0 14px; font-size:18px; color:var(--blue-deep); padding-right:34px; }
   .modal-close-x{ position:absolute; top:16px; right:16px; width:30px; height:30px; border-radius:50%; border:none; background:var(--bg-card); color:var(--text-dim); font-size:15px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:5; }
-  .modal{ position:relative; }
   .proj-item{ display:flex; align-items:center; gap:10px; padding:13px 12px; border-radius:12px; margin-bottom:6px; background:var(--bg-card); cursor:pointer; border:1px solid var(--line); }
   .proj-item.active{ border:1.5px solid var(--gold); background:#FFF8E8; }
   .proj-item .pname{ flex:1; font-size:15px; font-weight:600; }
@@ -1791,12 +1790,12 @@ document.addEventListener('keydown', function onceK(){
 function showExitConfirm(){
   const backdrop=document.createElement('div'); backdrop.className='modal-backdrop small-modal'; backdrop.id='exitBackdrop';
   backdrop.innerHTML = '<div class="modal" style="text-align:center;">'+
-    '<div style="font-size:56px; line-height:1; margin-bottom:8px;">🚪</div>'+
+    '<div style="font-size:128px; line-height:1; margin-bottom:10px;">🚪</div>'+
     '<h2>Izlazak iz aplikacije</h2>'+
     '<p style="font-size:14.5px; color:var(--text); line-height:1.5; margin:0 0 20px;">Da li sigurno želite da izađete?</p>'+
     '<div class="modal-actions">'+
-    '<button class="cancel-btn" id="exitStayBtn">↩️ Ostani</button>'+
-    '<button class="delete-btn" id="exitLeaveBtn">🚪 Izađi</button>'+
+    '<button class="cancel-btn" id="exitStayBtn"><span style="font-size:44px; vertical-align:-14px; margin-right:6px;">↩️</span>Ostani</button>'+
+    '<button class="delete-btn" id="exitLeaveBtn"><span style="font-size:44px; vertical-align:-14px; margin-right:6px;">🚪</span>Izađi</button>'+
     '</div></div>';
   document.body.appendChild(backdrop);
   document.body.style.overflow = 'hidden';
