@@ -191,8 +191,18 @@
 </style>
 </head>
 <body>
-<div id="debugLog" style="display:none; position:fixed; left:6px; right:6px; bottom:6px; max-height:40vh; overflow-y:auto; background:rgba(0,0,0,0.9); color:#8f8; font-family:monospace; font-size:11px; line-height:1.4; padding:8px; border-radius:8px; z-index:9999; white-space:pre-wrap;"></div>
-<button id="debugToggleBtn" style="position:fixed; right:8px; bottom:8px; z-index:10000; background:#333; color:#fff; border:1px solid #555; border-radius:50%; width:36px; height:36px; font-size:16px;">🐞</button>
+<div class="modal-backdrop small-modal" id="exitBackdrop" style="display:none;">
+  <div class="modal" style="text-align:center;">
+    <div style="font-size:128px; line-height:1; margin-bottom:10px;">🚪</div>
+    <h2>Izlazak iz aplikacije</h2>
+    <p style="font-size:14.5px; color:var(--text); line-height:1.5; margin:0 0 20px;">Da li sigurno želite da izađete?</p>
+    <div class="modal-actions">
+      <button class="cancel-btn" id="exitStayBtn"><span style="font-size:44px; vertical-align:-14px; margin-right:6px;">↩️</span>Ostani</button>
+      <button class="delete-btn" id="exitLeaveBtn"><span style="font-size:44px; vertical-align:-14px; margin-right:6px;">🚪</span>Izađi</button>
+    </div>
+  </div>
+</div>
+
 <div id="statusBanner"></div>
 <div id="undoToast"></div>
 <div id="app"></div>
@@ -1719,29 +1729,16 @@ function submitQuickNew(){
   createProject(name, lastLang);
 }
 let overlayStack = [];
-let suppressPopstateCount = 0;
-const debugLogEl = document.getElementById('debugLog');
-const debugToggleBtn = document.getElementById('debugToggleBtn');
-function dbg(msg){
-  const t = new Date().toISOString().slice(11,23);
-  debugLogEl.textContent += `[${t}] ${msg}\n`;
-  debugLogEl.scrollTop = debugLogEl.scrollHeight;
-}
-debugToggleBtn.addEventListener('click', () => {
-  debugLogEl.style.display = debugLogEl.style.display === 'none' ? 'block' : 'none';
-});
-dbg('--- page loaded, history.length=' + history.length + ' ---');
+let programmaticNav = false;
 function pushOverlayEntry(closeFn){
   overlayStack.push(closeFn);
   try{ history.pushState({modalOpen:true}, '', location.href); }catch(e){}
-  dbg('pushOverlayEntry(' + (closeFn.name||'?') + '), stack=' + overlayStack.length + ', history.length=' + history.length);
 }
 function popOverlayEntry(closeFn){
   const idx = overlayStack.lastIndexOf(closeFn);
   if(idx!==-1) overlayStack.splice(idx,1);
-  suppressPopstateCount++;
-  dbg('popOverlayEntry(' + (closeFn.name||'?') + '), stack=' + overlayStack.length + ' -> history.back()');
-  try{ history.back(); }catch(e){ suppressPopstateCount--; }
+  programmaticNav = true;
+  try{ history.back(); }catch(e){ programmaticNav = false; }
 }
 function appendModalBackdrop(backdrop, closeFn){
   const existingSame = document.getElementById(backdrop.id);
@@ -1760,16 +1757,16 @@ function closeModal(){
   releaseScrollLockIfNoModals();
 }
 window.addEventListener('popstate', function(){
-  dbg('POPSTATE fired. history.length=' + history.length + ' suppressPopstateCount=' + suppressPopstateCount + ' exitConfirmed=' + exitConfirmed + ' overlayStack=' + overlayStack.length + ' exitTrapArmed=' + exitTrapArmed);
-  if(suppressPopstateCount>0){ suppressPopstateCount--; dbg('  -> was suppressed'); return; }
-  if(exitConfirmed){ dbg('  -> exitConfirmed, letting it exit'); return; }
+  if(programmaticNav){
+    programmaticNav = false;
+    return;
+  }
+  if(exitConfirmed){ return; }
   if(overlayStack.length > 0){
     const fn = overlayStack.pop();
-    dbg('  -> closing top overlay: ' + (fn.name||'?'));
     fn();
     return;
   }
-  dbg('  -> showing exit confirm dialog');
   exitTrapArmed = false;
   showExitConfirm();
 });
@@ -1806,9 +1803,6 @@ function armExitTrap(){
   if(!exitTrapArmed){
     history.pushState({exitTrap:true}, '');
     exitTrapArmed = true;
-    dbg('armExitTrap: pushed exitTrap, history.length=' + history.length);
-  } else {
-    dbg('armExitTrap: skipped (already armed)');
   }
 }
 document.addEventListener('pointerdown', function onceP(){
@@ -1819,38 +1813,23 @@ document.addEventListener('keydown', function onceK(){
   armExitTrap();
   document.removeEventListener('keydown', onceK);
 }, {once:true});
+const exitBackdrop = document.getElementById('exitBackdrop');
 function showExitConfirm(){
-  const backdrop=document.createElement('div'); backdrop.className='modal-backdrop small-modal'; backdrop.id='exitBackdrop';
-  backdrop.innerHTML = '<div class="modal" style="text-align:center;">'+
-    '<div style="font-size:128px; line-height:1; margin-bottom:10px;">🚪</div>'+
-    '<h2>Izlazak iz aplikacije</h2>'+
-    '<p style="font-size:14.5px; color:var(--text); line-height:1.5; margin:0 0 20px;">Da li sigurno želite da izađete?</p>'+
-    '<div class="modal-actions">'+
-    '<button class="cancel-btn" id="exitStayBtn"><span style="font-size:44px; vertical-align:-14px; margin-right:6px;">↩️</span>Ostani</button>'+
-    '<button class="delete-btn" id="exitLeaveBtn"><span style="font-size:44px; vertical-align:-14px; margin-right:6px;">🚪</span>Izađi</button>'+
-    '</div></div>';
-  document.body.appendChild(backdrop);
-  document.body.style.overflow = 'hidden';
-  document.getElementById('exitStayBtn').onclick = ()=>{
-    dbg('OSTANI clicked');
-    backdrop.remove();
-    releaseScrollLockIfNoModals();
-    armExitTrap();
-  };
-  document.getElementById('exitLeaveBtn').onclick = ()=>{
-    dbg('IZAĐI clicked. history.length=' + history.length);
-    backdrop.remove();
-    releaseScrollLockIfNoModals();
-    exitConfirmed = true;
-    try{ history.back(); }catch(e){}
-    setTimeout(() => {
-      dbg('  +50ms after Izađi: history.length=' + history.length + ' (still here means back() had nothing to go to)');
-      try{ window.close(); }catch(e){}
-    }, 50);
-  };
+  exitBackdrop.style.display = 'flex';
 }
-
-
+function hideExitConfirm(){
+  exitBackdrop.style.display = 'none';
+}
+document.getElementById('exitLeaveBtn').addEventListener('click', () => {
+  hideExitConfirm();
+  exitConfirmed = true;
+  history.back();
+  setTimeout(() => { try{ window.close(); }catch(e){} }, 50);
+});
+document.getElementById('exitStayBtn').addEventListener('click', () => {
+  hideExitConfirm();
+  armExitTrap();
+});
 /* ---------- MODAL: project settings ---------- */
 function openProjectSettings(){
   const proj = currentProject();
