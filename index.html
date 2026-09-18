@@ -1767,7 +1767,8 @@ window.addEventListener('popstate', function(){
     fn();
     return;
   }
-  exitTrapArmed = false;
+  exitTrapBuffer--;
+  exitTrapArmed = exitTrapBuffer > 0;
   showExitConfirm();
 });
 let __confirmYesAction = null;
@@ -1798,10 +1799,14 @@ function runConfirmYes(){ const fn=__confirmYesAction; closeConfirmModal(); if(f
 
 /* ---------- EXIT CONFIRMATION ---------- */
 let exitTrapArmed = false;
+let exitTrapBuffer = 0;
 let exitConfirmed = false;
 function armExitTrap(){
   if(!exitTrapArmed){
     history.pushState({exitTrap:true}, '');
+    history.pushState({exitTrap:true}, '');
+    history.pushState({exitTrap:true}, '');
+    exitTrapBuffer = 3;
     exitTrapArmed = true;
   }
 }
