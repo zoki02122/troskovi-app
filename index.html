@@ -191,6 +191,8 @@
 </style>
 </head>
 <body>
+<div id="debugLog" style="display:none; position:fixed; left:6px; right:6px; bottom:6px; max-height:40vh; overflow-y:auto; background:rgba(0,0,0,0.9); color:#8f8; font-family:monospace; font-size:11px; line-height:1.4; padding:8px; border-radius:8px; z-index:9999; white-space:pre-wrap;"></div>
+<button id="debugToggleBtn" style="position:fixed; right:8px; bottom:8px; z-index:10000; background:#333; color:#fff; border:1px solid #555; border-radius:50%; width:36px; height:36px; font-size:16px;">🐞</button>
 <div id="statusBanner"></div>
 <div id="undoToast"></div>
 <div id="app"></div>
@@ -1718,14 +1720,27 @@ function submitQuickNew(){
 }
 let overlayStack = [];
 let suppressPopstateCount = 0;
+const debugLogEl = document.getElementById('debugLog');
+const debugToggleBtn = document.getElementById('debugToggleBtn');
+function dbg(msg){
+  const t = new Date().toISOString().slice(11,23);
+  debugLogEl.textContent += `[${t}] ${msg}\n`;
+  debugLogEl.scrollTop = debugLogEl.scrollHeight;
+}
+debugToggleBtn.addEventListener('click', () => {
+  debugLogEl.style.display = debugLogEl.style.display === 'none' ? 'block' : 'none';
+});
+dbg('--- page loaded, history.length=' + history.length + ' ---');
 function pushOverlayEntry(closeFn){
   overlayStack.push(closeFn);
   try{ history.pushState({modalOpen:true}, '', location.href); }catch(e){}
+  dbg('pushOverlayEntry(' + (closeFn.name||'?') + '), stack=' + overlayStack.length + ', history.length=' + history.length);
 }
 function popOverlayEntry(closeFn){
   const idx = overlayStack.lastIndexOf(closeFn);
   if(idx!==-1) overlayStack.splice(idx,1);
   suppressPopstateCount++;
+  dbg('popOverlayEntry(' + (closeFn.name||'?') + '), stack=' + overlayStack.length + ' -> history.back()');
   try{ history.back(); }catch(e){ suppressPopstateCount--; }
 }
 function appendModalBackdrop(backdrop, closeFn){
@@ -1745,13 +1760,16 @@ function closeModal(){
   releaseScrollLockIfNoModals();
 }
 window.addEventListener('popstate', function(){
-  if(suppressPopstateCount>0){ suppressPopstateCount--; return; }
-  if(exitConfirmed){ return; }
+  dbg('POPSTATE fired. history.length=' + history.length + ' suppressPopstateCount=' + suppressPopstateCount + ' exitConfirmed=' + exitConfirmed + ' overlayStack=' + overlayStack.length + ' exitTrapArmed=' + exitTrapArmed);
+  if(suppressPopstateCount>0){ suppressPopstateCount--; dbg('  -> was suppressed'); return; }
+  if(exitConfirmed){ dbg('  -> exitConfirmed, letting it exit'); return; }
   if(overlayStack.length > 0){
     const fn = overlayStack.pop();
+    dbg('  -> closing top overlay: ' + (fn.name||'?'));
     fn();
     return;
   }
+  dbg('  -> showing exit confirm dialog');
   exitTrapArmed = false;
   showExitConfirm();
 });
@@ -1788,6 +1806,9 @@ function armExitTrap(){
   if(!exitTrapArmed){
     try{ history.pushState({exitTrap:true}, '', location.href); }catch(e){}
     exitTrapArmed = true;
+    dbg('armExitTrap: pushed exitTrap, history.length=' + history.length);
+  } else {
+    dbg('armExitTrap: skipped (already armed)');
   }
 }
 document.addEventListener('pointerdown', function onceP(){
@@ -1811,11 +1832,13 @@ function showExitConfirm(){
   document.body.appendChild(backdrop);
   document.body.style.overflow = 'hidden';
   document.getElementById('exitStayBtn').onclick = ()=>{
+    dbg('OSTANI clicked');
     backdrop.remove();
     releaseScrollLockIfNoModals();
     armExitTrap();
   };
   document.getElementById('exitLeaveBtn').onclick = ()=>{
+    dbg('IZAĐI clicked. history.length=' + history.length);
     backdrop.remove();
     releaseScrollLockIfNoModals();
     exitConfirmed = true;
