@@ -1804,9 +1804,10 @@ let exitTrapArmed = false;
 let exitConfirmed = false;
 function armExitTrap(){
   if(!exitTrapArmed){
-    try{ history.pushState({exitTrap:true}, '', location.href); }catch(e){}
+    const trapUrl = location.pathname + location.search + '#trap';
+    try{ history.pushState({exitTrap:true}, '', trapUrl); }catch(e){}
     exitTrapArmed = true;
-    dbg('armExitTrap: pushed exitTrap, history.length=' + history.length);
+    dbg('armExitTrap: pushed exitTrap, history.length=' + history.length + ', url=' + location.href);
   } else {
     dbg('armExitTrap: skipped (already armed)');
   }
