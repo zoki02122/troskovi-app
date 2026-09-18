@@ -1804,10 +1804,9 @@ let exitTrapArmed = false;
 let exitConfirmed = false;
 function armExitTrap(){
   if(!exitTrapArmed){
-    const trapUrl = location.pathname + location.search + '#trap';
-    try{ history.pushState({exitTrap:true}, '', trapUrl); }catch(e){}
+    history.pushState({exitTrap:true}, '');
     exitTrapArmed = true;
-    dbg('armExitTrap: pushed exitTrap, history.length=' + history.length + ', url=' + location.href);
+    dbg('armExitTrap: pushed exitTrap, history.length=' + history.length);
   } else {
     dbg('armExitTrap: skipped (already armed)');
   }
@@ -1844,6 +1843,10 @@ function showExitConfirm(){
     releaseScrollLockIfNoModals();
     exitConfirmed = true;
     try{ history.back(); }catch(e){}
+    setTimeout(() => {
+      dbg('  +50ms after Izađi: history.length=' + history.length + ' (still here means back() had nothing to go to)');
+      try{ window.close(); }catch(e){}
+    }, 50);
   };
 }
 
