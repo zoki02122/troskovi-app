@@ -1811,6 +1811,7 @@ function armExitTrap(){
     dbg('armExitTrap: skipped (already armed)');
   }
 }
+armExitTrap();
 document.addEventListener('pointerdown', function onceP(){
   armExitTrap();
   document.removeEventListener('pointerdown', onceP);
