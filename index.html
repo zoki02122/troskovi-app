@@ -1345,11 +1345,15 @@ let chatMessages = [];
 function openChatMode(){
   chatMessages = [];
   renderChatOverlay();
-  pushOverlayEntry(closeChatMode);
+  pushOverlayEntry(closeChatModeDomOnly);
+}
+function closeChatModeDomOnly(){
+  const el = document.getElementById('chatOverlayRoot');
+  if(el) el.remove();
 }
 function closeChatMode(){
-  const el = document.getElementById('chatOverlayRoot');
-  if(el){ el.remove(); popOverlayEntry(closeChatMode); }
+  closeChatModeDomOnly();
+  popOverlayEntry(closeChatModeDomOnly);
 }
 function parseAIAction(raw){
   const marker = /###AKCIJA###([\s\S]*?)###KRAJ###/;
@@ -1745,16 +1749,20 @@ function appendModalBackdrop(backdrop, closeFn){
   if(existingSame) existingSame.remove();
   document.body.appendChild(backdrop);
   document.body.style.overflow = 'hidden';
-  pushOverlayEntry(closeFn);
+  pushOverlayEntry(closeModalDomOnly);
 }
 function releaseScrollLockIfNoModals(){
   const anyOpen = document.getElementById('modalBackdrop') || document.getElementById('confirmBackdrop');
   if(!anyOpen){ document.body.style.overflow = ''; }
 }
-function closeModal(){
+function closeModalDomOnly(){
   const b=document.getElementById('modalBackdrop');
-  if(b){ b.remove(); popOverlayEntry(closeModal); }
+  if(b) b.remove();
   releaseScrollLockIfNoModals();
+}
+function closeModal(){
+  closeModalDomOnly();
+  popOverlayEntry(closeModalDomOnly);
 }
 window.addEventListener('popstate', function(){
   if(programmaticNav){
@@ -1767,8 +1775,7 @@ window.addEventListener('popstate', function(){
     fn();
     return;
   }
-  exitTrapBuffer--;
-  exitTrapArmed = exitTrapBuffer > 0;
+  try{ history.pushState({exitTrap:true}, ''); }catch(e){}
   showExitConfirm();
 });
 let __confirmYesAction = null;
@@ -1786,29 +1793,25 @@ function showConfirmModal(message, onYes, yesLabel, noLabel, yesClass){
     '</div></div>';
   document.body.appendChild(backdrop);
   document.body.style.overflow = 'hidden';
-  pushOverlayEntry(closeConfirmModal);
+  pushOverlayEntry(closeConfirmModalDomOnly);
   backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeConfirmModal(); });
 }
-function closeConfirmModal(){
+function closeConfirmModalDomOnly(){
   const b=document.getElementById('confirmBackdrop');
-  if(b){ b.remove(); popOverlayEntry(closeConfirmModal); }
+  if(b) b.remove();
   __confirmYesAction=null;
   releaseScrollLockIfNoModals();
+}
+function closeConfirmModal(){
+  closeConfirmModalDomOnly();
+  popOverlayEntry(closeConfirmModalDomOnly);
 }
 function runConfirmYes(){ const fn=__confirmYesAction; closeConfirmModal(); if(fn) fn(); }
 
 /* ---------- EXIT CONFIRMATION ---------- */
-let exitTrapArmed = false;
-let exitTrapBuffer = 0;
 let exitConfirmed = false;
 function armExitTrap(){
-  if(!exitTrapArmed){
-    history.pushState({exitTrap:true}, '');
-    history.pushState({exitTrap:true}, '');
-    history.pushState({exitTrap:true}, '');
-    exitTrapBuffer = 3;
-    exitTrapArmed = true;
-  }
+  try{ history.pushState({exitTrap:true}, ''); }catch(e){}
 }
 document.addEventListener('pointerdown', function onceP(){
   armExitTrap();
@@ -1828,12 +1831,10 @@ function hideExitConfirm(){
 document.getElementById('exitLeaveBtn').addEventListener('click', () => {
   hideExitConfirm();
   exitConfirmed = true;
-  history.back();
-  setTimeout(() => { try{ window.close(); }catch(e){} }, 50);
+  history.go(-2);
 });
 document.getElementById('exitStayBtn').addEventListener('click', () => {
   hideExitConfirm();
-  armExitTrap();
 });
 /* ---------- MODAL: project settings ---------- */
 function openProjectSettings(){
