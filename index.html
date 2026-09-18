@@ -1927,8 +1927,10 @@ function saveProjectSettings(){
 }
 function confirmDeleteProject(){
   const proj = currentProject();
-  closeModal();
-  showConfirmModal(t('confirm_delete_project_full')+' "'+(proj?proj.name:'')+'" '+t('confirm_delete_project_full_end'), ()=>{ deleteProject(currentProjectId); });
+  showConfirmModal(t('confirm_delete_project_full')+' "'+(proj?proj.name:'')+'" '+t('confirm_delete_project_full_end'), ()=>{
+    deleteProject(currentProjectId);
+    closeModal();
+  });
 }
 
 /* ---------- MODAL: kurs ---------- */
@@ -2018,8 +2020,10 @@ function saveEntryFromModal(id){
   updateEntry(id, {datum: isoFromParts(d,m,y), opis, iznos, valuta, kategorija, napomena});
 }
 function deleteEntryFromModal(id){
-  closeModal();
-  showConfirmModal(t('confirm_delete_entry'), ()=>{ deleteEntry(id); });
+  showConfirmModal(t('confirm_delete_entry'), ()=>{
+    deleteEntry(id);
+    closeModal();
+  });
 }
 
 /* ---------- EXPORT ---------- */
