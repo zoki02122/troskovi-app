@@ -50,7 +50,7 @@
     font-family:var(--font-ui); overscroll-behavior:none; }
   .num{ font-variant-numeric:tabular-nums; }
   .neg-amt{ color:#E5231B !important; }
-  #app{ max-width:560px; margin:0 auto; padding:0 0 128px; min-height:100vh; position:relative; }
+  #app{ max-width:560px; margin:0 auto; padding:0 0 190px; min-height:100vh; position:relative; }
 
   .topbar{ position:sticky; top:0; z-index:10; background:var(--bg); padding:12px 12px 6px; border-bottom:1px solid var(--line); }
   .tb-row{ display:flex; align-items:stretch; gap:7px; min-width:0; }
@@ -80,8 +80,8 @@
   .tr2-total .tr2-label{ display:block; font-size:8.5px; color:var(--total-label); text-transform:uppercase; letter-spacing:0.3px; position:relative; }
   .tr2-total .tr2-val{ display:block; font-size:16px; font-weight:800; color:var(--total-val); font-family:var(--font-num); position:relative; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-  .list-area{ padding:10px 10px 0; }
-  .group-block{ margin-bottom:12px; border:1px solid var(--line); border-radius:11px; overflow:hidden; }
+  .list-area{ padding:6px 10px 0; }
+  .group-block{ margin-bottom:6px; border:1px solid var(--line); border-radius:11px; overflow:hidden; }
   .group-head{ background:var(--accent); color:var(--on-accent); font-size:10px; font-weight:700; padding:3px 10px; letter-spacing:0.2px; }
   table.entries-table{ width:100%; border-collapse:collapse; background:var(--surface); }
   table.entries-table td{ padding:8px 10px; font-size:13px; border-bottom:1px solid var(--line); vertical-align:top; }
@@ -124,6 +124,9 @@
 
   .bottom-bar{ position:fixed; bottom:0; left:0; right:0; max-width:560px; margin:0 auto; padding:8px 10px calc(8px + env(safe-area-inset-bottom)); background:var(--surface); border-top:1px solid var(--line); display:flex; flex-direction:column; gap:6px; }
   .entry-row{ display:flex; gap:7px; align-items:center; }
+  /* donja traka: gore polje za unos preko cele širine, dole 💬 | široko dugme za slanje | + */
+  .entry-row-actions{ gap:12px; }
+  .bottom-bar .entry-row-actions .send-btn{ flex:1 1 auto; width:auto; border-radius:999px; }
   .plus-btn{ width:44px; height:44px; border-radius:50%; border:1px solid var(--line); background:var(--bg-card); color:var(--blue-deep); font-size:22px; font-weight:600; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none; line-height:1; }
   .chat-btn{ font-size:18px; border-color:var(--chat-soft-line); background:var(--chat-soft); }
 
@@ -289,9 +292,9 @@ html[data-theme="banka"]{
 }
 [data-theme="banka"] .tr2-val .cur{ font-size:13px; font-weight:400; margin-left:4px; }
 /* grupe */
-[data-theme="banka"] .list-area{ padding:14px 14px 0; }
-[data-theme="banka"] .group-block{ border:none; border-radius:16px; margin-bottom:18px; overflow:visible; }
-[data-theme="banka"] .group-head{ background:none; color:var(--gold-deep); font-family:var(--font-num); font-size:15px; font-weight:600; padding:0 4px 7px; display:flex; align-items:center; gap:10px; }
+[data-theme="banka"] .list-area{ padding:6px 14px 0; }
+[data-theme="banka"] .group-block{ border:none; border-radius:16px; margin-bottom:6px; overflow:visible; }
+[data-theme="banka"] .group-head{ background:none; color:var(--gold-deep); font-family:var(--font-num); font-size:15px; font-weight:600; line-height:1; padding:0 4px 3px; display:flex; align-items:center; gap:10px; }
 [data-theme="banka"] .group-head::after{ content:""; flex:1; height:1px; background:linear-gradient(90deg,rgba(184,146,74,.55),transparent); }
 [data-theme="banka"] table.entries-table{ border-radius:16px; overflow:hidden; box-shadow:0 1px 0 rgba(14,39,71,.04), 0 6px 18px -8px rgba(14,39,71,.18); }
 [data-theme="banka"] table.entries-table td{ padding:13px 16px; font-size:14.5px; border-bottom:1px solid #F0ECE3; }
@@ -304,7 +307,7 @@ html[data-theme="banka"]{
 /* donja traka */
 [data-theme="banka"] .bottom-bar{ left:10px; right:10px; bottom:calc(10px + env(safe-area-inset-bottom)); padding:8px; border:1px solid rgba(230,225,214,.9); border-radius:34px; background:rgba(255,255,255,.88); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); box-shadow:0 12px 30px -12px rgba(14,39,71,.35); }
 [data-theme="banka"] .plus-btn{ width:44px; height:44px; background:#F4F1EA; border:none; color:var(--blue-deep); }
-[data-theme="banka"] .entry-input-wrap{ background:transparent; border:none; padding-left:6px; }
+[data-theme="banka"] .entry-input-wrap{ background:#F4F1EA; border:none; }
 [data-theme="banka"] .send-btn{ width:50px; height:50px; background:linear-gradient(140deg,#16365F,#0E2747); box-shadow:inset 0 0 0 1px rgba(212,178,110,.5); color:#E8CE92; }
 
 /* =========================================================
@@ -348,9 +351,9 @@ html[data-theme="crna"]{
   -webkit-background-clip:text; background-clip:text; color:transparent;
 }
 [data-theme="crna"] .tr2-val .cur{ font-size:13px; font-weight:400; margin-left:4px; }
-[data-theme="crna"] .list-area{ padding:14px 14px 0; }
-[data-theme="crna"] .group-block{ border:none; margin-bottom:18px; overflow:visible; }
-[data-theme="crna"] .group-head{ background:none; color:var(--gold-deep); font-family:var(--font-num); font-size:15px; font-weight:600; padding:0 4px 7px; display:flex; align-items:center; gap:10px; }
+[data-theme="crna"] .list-area{ padding:6px 14px 0; }
+[data-theme="crna"] .group-block{ border:none; margin-bottom:6px; overflow:visible; }
+[data-theme="crna"] .group-head{ background:none; color:var(--gold-deep); font-family:var(--font-num); font-size:15px; font-weight:600; line-height:1; padding:0 4px 3px; display:flex; align-items:center; gap:10px; }
 [data-theme="crna"] .group-head::after{ content:""; flex:1; height:1px; background:linear-gradient(90deg,rgba(205,178,122,.45),transparent); }
 [data-theme="crna"] table.entries-table{ border-radius:16px; overflow:hidden; border:1px solid #2E2E33; }
 [data-theme="crna"] table.entries-table td{ padding:13px 16px; font-size:14.5px; border-bottom:1px solid #2C2C31; }
@@ -361,7 +364,7 @@ html[data-theme="crna"]{
 [data-theme="crna"] tr.total-row td.col-amt{ font-size:17px !important; color:var(--gold-deep); }
 [data-theme="crna"] .bottom-bar{ left:10px; right:10px; bottom:calc(10px + env(safe-area-inset-bottom)); padding:8px; border:1px solid #34343A; border-radius:34px; background:rgba(38,38,42,.9); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); box-shadow:0 14px 30px -10px rgba(0,0,0,.8); }
 [data-theme="crna"] .plus-btn{ background:#303035; border:none; color:var(--gold-deep); }
-[data-theme="crna"] .entry-input-wrap{ background:transparent; border:none; padding-left:6px; }
+[data-theme="crna"] .entry-input-wrap{ background:#303035; border:none; }
 [data-theme="crna"] .send-btn{ width:50px; height:50px; background:linear-gradient(160deg,#E4CD98,#B8995C); color:#1B1B1E; }
 
 /* =========================================================
@@ -402,9 +405,9 @@ html[data-theme="koza"]{
 [data-theme="koza"] .tr2-total .tr2-label{ font-size:11px; text-transform:none; letter-spacing:0; color:rgba(216,194,143,.75); margin-top:2px; }
 [data-theme="koza"] .tr2-total .tr2-val{ font-size:25px; font-weight:600; margin-left:auto; text-align:right; color:#EAD6A2; text-shadow:0 1px 0 rgba(0,0,0,.35); }
 [data-theme="koza"] .tr2-val .cur{ font-size:14px; font-weight:400; margin-left:4px; }
-[data-theme="koza"] .list-area{ padding:14px 14px 0; }
-[data-theme="koza"] .group-block{ border:none; margin-bottom:18px; overflow:visible; }
-[data-theme="koza"] .group-head{ background:none; color:var(--coral); font-family:"TR Script",cursive; font-size:12px; font-weight:700; padding:0 6px 4px; line-height:1; }
+[data-theme="koza"] .list-area{ padding:6px 14px 0; }
+[data-theme="koza"] .group-block{ border:none; margin-bottom:6px; overflow:visible; }
+[data-theme="koza"] .group-head{ background:none; color:var(--coral); font-family:"TR Script",cursive; font-size:12px; font-weight:700; padding:0 6px 3px; line-height:1; }
 [data-theme="koza"] table.entries-table{ border-radius:16px; overflow:hidden; background:var(--surface);
   box-shadow:0 1px 0 #D9CDB4, 0 6px 14px -8px rgba(60,45,20,.3); }
 [data-theme="koza"] table.entries-table tr:nth-child(even){ background:transparent; }
@@ -417,7 +420,7 @@ html[data-theme="koza"]{
 [data-theme="koza"] tr.total-row td.col-amt{ font-size:19px !important; color:var(--coral); }
 [data-theme="koza"] .bottom-bar{ left:10px; right:10px; bottom:calc(10px + env(safe-area-inset-bottom)); padding:8px; border:1px solid #D9CDB4; border-radius:34px; background:rgba(248,243,232,.93); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow:0 12px 26px -12px rgba(60,45,20,.45); }
 [data-theme="koza"] .plus-btn{ background:#EDE4D0; border:none; color:var(--blue-deep); }
-[data-theme="koza"] .entry-input-wrap{ background:transparent; border:none; padding-left:6px; }
+[data-theme="koza"] .entry-input-wrap{ background:#EDE4D0; border:none; }
 [data-theme="koza"] .send-btn{ width:50px; height:50px; background:var(--blue-deep); color:#EAD6A2; box-shadow:inset 0 0 0 2px #1F3A2E, inset 0 0 0 3.5px rgba(214,184,120,.6); }
 
 /* =========================================================
@@ -465,9 +468,9 @@ html[data-theme="ponoc"]{
 [data-theme="ponoc"] .tr2-total .tr2-val{ margin-left:auto; font-size:27px; font-weight:600; color:var(--text); letter-spacing:.2px; }
 [data-theme="ponoc"] .tr2-val .cur{ font-family:var(--font-ui); font-size:13px; font-weight:400; color:var(--text-dim); margin-left:3px; }
 /* dani: natpis kao u prevodiocu, pločice sa crnim razmakom od 2px */
-[data-theme="ponoc"] .list-area{ padding:12px 10px 0; }
-[data-theme="ponoc"] .group-block{ border:none; border-radius:0; overflow:visible; margin-bottom:14px; }
-[data-theme="ponoc"] .group-head{ background:none; color:var(--gold); font-family:var(--font-title); font-size:15px; font-weight:600; letter-spacing:.4px; padding:0 6px 5px; }
+[data-theme="ponoc"] .list-area{ padding:6px 10px 0; }
+[data-theme="ponoc"] .group-block{ border:none; border-radius:0; overflow:visible; margin-bottom:6px; }
+[data-theme="ponoc"] .group-head{ background:none; color:var(--gold); font-family:var(--font-title); font-size:15px; font-weight:600; letter-spacing:.4px; line-height:1; padding:0 6px 3px; }
 [data-theme="ponoc"] table.entries-table{ background:transparent; border-collapse:separate; border-spacing:0 2px; margin-top:-2px; }
 [data-theme="ponoc"] table.entries-table tr, [data-theme="ponoc"] table.entries-table tr:nth-child(even){ background:transparent; }
 [data-theme="ponoc"] table.entries-table td{ background:var(--card-shine), var(--bg-card); border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:12px 16px; font-size:15.5px; }
@@ -1648,12 +1651,15 @@ function render(){
     '</div>'+
     '<div class="bottom-bar">'+pendingHtml+
     (selectedPhoto ? ('<div class="photo-preview-row"><img src="'+selectedPhoto.dataUrl+'"><span class="pp-name">'+t('photo_selected')+': '+escapeHtml(selectedPhoto.name)+'</span><button class="pp-remove" onclick="clearSelectedPhoto()">✕ '+t('remove_photo')+'</button></div>') : '')+
-    '<div class="entry-row">'+
-    '<button class="plus-btn chat-btn" onclick="openChatMode()" title="'+t('ai_chat_title')+'">'+ic('&#128172;','chat')+'</button>'+
-    '<button class="plus-btn" onclick="openAttachMenu()" title="'+t('attach_photo')+'">'+ic('+','plus')+'</button>'+
+    '<div class="entry-row entry-row-input">'+
     '<div class="entry-input-wrap">'+
     '<input type="text" id="manualInput" placeholder="'+t('manual_input_placeholder')+'" onkeydown="if(event.key===\'Enter\') submitManualText()">'+
-    '</div><button class="send-btn" '+(isProcessing?'disabled':'')+' onmousedown="event.preventDefault()" onclick="submitManualText()">'+(isProcessing?'<span class="spinner"></span>':ic('➤','send'))+'</button></div></div>';
+    '</div></div>'+
+    '<div class="entry-row entry-row-actions">'+
+    '<button class="plus-btn chat-btn" onclick="openChatMode()" title="'+t('ai_chat_title')+'">'+ic('&#128172;','chat')+'</button>'+
+    '<button class="send-btn" '+(isProcessing?'disabled':'')+' onmousedown="event.preventDefault()" onclick="submitManualText()">'+(isProcessing?'<span class="spinner"></span>':ic('➤','send'))+'</button>'+
+    '<button class="plus-btn" onclick="openAttachMenu()" title="'+t('attach_photo')+'">'+ic('+','plus')+'</button>'+
+    '</div></div>';
 }
 function buildAllProjectsSummary(){
   return projects.map(p=>{
