@@ -532,6 +532,12 @@ html[data-theme="ponoc"]{
 html[data-theme="banka"]{ --warm:#FBF8F1; --warm-line:#E6D6B0; --rate-bg:#FFFFFF; --accent:#0E2747; --on-accent:#fff; --on-gold:#fff; --chat-soft:#F4F1EA; --chat-soft-line:#E6E1D6; }
 html[data-theme="crna"]{ color-scheme:dark; --coral:#D0604A; --warm:#2A2721; --warm-line:#5A4E36; --rate-bg:#26262A; --accent:#CDB27A; --on-accent:#1B1B1E; --on-gold:#1B1B1E; --chat-soft:#303035; --chat-soft-line:#3A3A40; }
 html[data-theme="koza"]{ --warm:#F4ECDA; --warm-line:#D9C49A; --rate-bg:#F8F3E8; --accent:#1F3A2E; --on-accent:#EAD6A2; --on-gold:#fff; --chat-soft:#EDE4D0; --chat-soft-line:#D9CDB4; }
+/* v4: kartica ukupno za vreme pretrage — isprekidan okvir, natpis „pronađeno: …“ */
+.tr2-total.is-search{ border:1.5px dashed var(--hd-search-b, var(--hd-acc, var(--blue-deep))) !important; }
+[data-theme="klasicna"], [data-theme="banka"]{ --hd-search-b:var(--gold); }
+[data-theme="klasicna"] .tr2-total.is-search .tr2-proj{ text-align:right; max-width:none; font-size:12.5px; font-weight:600; color:rgba(255,255,255,.88); }
+.tr2-total.is-search .tr2-left{ min-width:0; }
+.tr2-total.is-search .tr2-proj{ display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:52vw; }
 [data-theme="ponoc"]{ --hd-acc:var(--gold); }
 [data-theme="crna"]{ --hd-acc:var(--gold-deep); }
 </style>
@@ -673,6 +679,7 @@ const I18N = {
     ai_format_off: 'poslednji AI unos: obrazac odgovora nije prihvaćen, korišćen rezervni način.',
     ai_format_reason: 'razlog',
     version_label: 'verzija',
+    found_label: 'pronađeno',
     hd_project: 'Projekat', hd_search: 'Pretraži', hd_currency: 'Valuta', hd_sort: 'Sortiraj',
     amounts_in: 'Iznosi u', rate_row: 'Kurs', pair_row: 'Valute projekta',
     sort_by_date: 'Po datumu', sort_by_category: 'Po kategoriji', sort_by_name: 'Po nazivu',
@@ -825,6 +832,7 @@ const I18N = {
     ai_format_off: 'last AI entry: response template not accepted, fallback used.',
     ai_format_reason: 'reason',
     version_label: 'version',
+    found_label: 'found',
     hd_project: 'Project', hd_search: 'Search', hd_currency: 'Currency', hd_sort: 'Sort',
     amounts_in: 'Amounts in', rate_row: 'Rate', pair_row: 'Project currencies',
     sort_by_date: 'By date', sort_by_category: 'By category', sort_by_name: 'By name',
@@ -1140,7 +1148,7 @@ function loadProjectData(pid){
 }
 function persistEntries(){ lsSet('entries:'+currentProjectId, JSON.stringify(entries)); }
 function persistRates(){ lsSet('rates:'+currentProjectId, JSON.stringify(rates)); }
-const APP_VERSION = 3; /* svaka objava: +1, i isti broj u linku ?v=N */
+const APP_VERSION = 4; /* svaka objava: +1, i isti broj u linku ?v=N */
 function getApiKey(){ const k = lsGet('app:apiKey'); return k ? k.value : ''; }
 function setApiKey(key){ lsSet('app:apiKey', key); }
 /* ishod poslednjeg AI unosa: koji oblik zahteva je server prihvatio i zašto je odbio ostale */
@@ -1605,6 +1613,8 @@ function render(){
   const searchQ = foldDiacritics(searchQuery.trim());
 
   let listHtml = '';
+  /* privremeni zbir pretrage: samo pronađene stavke, ništa se ne čuva */
+  let foundCount = 0, foundTotal = 0;
   if(groupKeys.length===0){
     listHtml = '<div class="empty">'+t('empty_project')+'<br>'+t('empty_project_hint')+'</div>';
   } else {
@@ -1618,6 +1628,7 @@ function render(){
         );
       }
       if(searchActive && items.length===0) return '';
+      if(searchActive) foundCount += items.length;
       let groupTotal = 0;
       const rows = items.map(e=>{
         const conv = convert(e.iznos, e.valuta, dispCur);
@@ -1642,6 +1653,7 @@ function render(){
           '<td class="col-opis">'+escapeHtml(e.opis)+(extra?('<span class="meta">'+escapeHtml(extra)+'</span>'):'')+'</td>'+
           '<td class="col-amt num">'+mainText+(subText?('<span class="sub num">'+subText+'</span>'):'')+'</td></tr>';
       }).join('');
+      if(searchActive) foundTotal += groupTotal;
       const label = viewMode==='datum' ? dmFromISO(key) : key;
       return '<div class="group-block"><div class="group-head">'+escapeHtml(label)+'</div>'+
         '<table class="entries-table"><tbody>'+rows+
@@ -1708,7 +1720,7 @@ function render(){
     '<button class="hd-ico" onclick="openSortWindow()"><span class="icon-btn hd-sq">'+ic('↕️','sort')+'</span><span class="hd-tx">'+t('hd_sort')+'</span></button>'+
     '</div>')+
     '<div class="tb-row" style="margin-top:7px;">'+
-    (groupKeys.length>0 ? ('<div class="tr2-total"><span class="tr2-left"><span class="tr2-proj">'+t('total')+'</span><span class="tr2-label">'+entries.length+' '+t('items_short')+'</span></span><span class="tr2-val num">'+amtHtml(fmtAmt(grandTotal), (dispCur||'').toLowerCase())+'</span></div>') : '')+
+    (groupKeys.length>0 ? ('<div class="tr2-total'+(searchActive?' is-search':'')+'"><span class="tr2-left"><span class="tr2-proj">'+(searchActive ? escapeHtml(t('found_label')+': '+searchQuery.trim()) : t('total'))+'</span><span class="tr2-label">'+(searchActive?foundCount:entries.length)+' '+t('items_short')+'</span></span><span class="tr2-val num">'+amtHtml(fmtAmt(searchActive?foundTotal:grandTotal), (dispCur||'').toLowerCase())+'</span></div>') : '')+
     '</div>'+
     '</div>'+
     '<div class="list-area">'+listHtml+
