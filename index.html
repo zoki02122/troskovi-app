@@ -71,6 +71,29 @@
 
   .rate-row{ display:flex; align-items:center; gap:6px; width:100%; }
   .rate-icon-btn{ width:36px; height:36px; border-radius:10px; border:1px solid var(--gold-deep); background:var(--rate-bg); display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; flex:none; line-height:1.15; gap:0; padding:0 2px; text-align:center; }
+
+  /* v3: zaglavlje po uzoru na Arhivu — red naziva između dve linije + kvadratne ikonice sa natpisom */
+  .hd-row{ display:flex; align-items:center; gap:8px; height:46px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); min-width:0; }
+  .hd-mark{ width:11px; height:11px; border:2px solid var(--hd-acc, var(--blue-deep)); transform:rotate(45deg); flex:none; margin:0 4px 0 3px; }
+  .hd-title{ flex:1; min-width:0; display:flex; align-items:center; gap:8px; cursor:pointer; }
+  .hd-name{ font-size:18px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+  .hd-chev{ font-size:12px; color:var(--text-dim); flex:none; }
+  .hd-date{ font-size:13px; font-weight:600; color:var(--text-dim); flex:none; border-left:1px solid var(--line); padding:4px 0 4px 8px; cursor:pointer; }
+  .hd-icons{ display:flex; align-items:flex-start; margin-top:11px; }
+  .hd-ico{ flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:6px; padding:0; border:none; background:none; cursor:pointer; font-family:inherit; }
+  .topbar .icon-btn.hd-sq{ width:54px; height:54px; border-radius:16px; font-size:21px; }
+  .topbar .icon-btn.hd-sq svg{ width:24px; height:24px; }
+  .hd-rate{ display:flex; flex-direction:column; align-items:center; line-height:1.1; }
+  .hd-rate .hr-c{ font-size:11px; color:var(--text-dim); font-weight:600; }
+  .hd-rate .hr-v{ font-size:16px; font-weight:700; color:var(--text); }
+  .hd-tx{ font-size:11.5px; line-height:1.2; color:var(--text-dim); text-align:center; white-space:nowrap; }
+  .hd-icons + .search-row, .hd-search{ margin-top:11px; }
+  .pick-row{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:13px 4px; border-top:1px solid var(--line); font-size:15px; color:var(--text); cursor:pointer; }
+  .pick-row:first-of-type{ border-top:none; }
+  .pick-row .pv{ color:var(--text-dim); font-size:14px; white-space:nowrap; }
+  .pick-row .pv.acc{ color:var(--hd-acc, var(--blue-deep)); font-weight:600; }
+  .pick-row .ok{ color:var(--hd-acc, var(--blue-deep)); font-weight:700; font-size:17px; }
+  .pick-row .cur-toggle button{ padding:0 12px; font-size:13px; }
   .rate-icon-btn .ri-ic{ font-size:8px; color:var(--gold-deep); font-weight:700; }
   .rate-icon-btn .ri-val{ font-size:12px; font-weight:800; color:var(--gold-deep); }
   .tr2-total{ width:100%; text-align:right; background:var(--accent); border-radius:10px; padding:7px 12px; position:relative; overflow:hidden; }
@@ -509,6 +532,8 @@ html[data-theme="ponoc"]{
 html[data-theme="banka"]{ --warm:#FBF8F1; --warm-line:#E6D6B0; --rate-bg:#FFFFFF; --accent:#0E2747; --on-accent:#fff; --on-gold:#fff; --chat-soft:#F4F1EA; --chat-soft-line:#E6E1D6; }
 html[data-theme="crna"]{ color-scheme:dark; --coral:#D0604A; --warm:#2A2721; --warm-line:#5A4E36; --rate-bg:#26262A; --accent:#CDB27A; --on-accent:#1B1B1E; --on-gold:#1B1B1E; --chat-soft:#303035; --chat-soft-line:#3A3A40; }
 html[data-theme="koza"]{ --warm:#F4ECDA; --warm-line:#D9C49A; --rate-bg:#F8F3E8; --accent:#1F3A2E; --on-accent:#EAD6A2; --on-gold:#fff; --chat-soft:#EDE4D0; --chat-soft-line:#D9CDB4; }
+[data-theme="ponoc"]{ --hd-acc:var(--gold); }
+[data-theme="crna"]{ --hd-acc:var(--gold-deep); }
 </style>
 </head>
 <body>
@@ -648,6 +673,9 @@ const I18N = {
     ai_format_off: 'poslednji AI unos: obrazac odgovora nije prihvaćen, korišćen rezervni način.',
     ai_format_reason: 'razlog',
     version_label: 'verzija',
+    hd_project: 'Projekat', hd_search: 'Pretraži', hd_currency: 'Valuta', hd_sort: 'Sortiraj',
+    amounts_in: 'Iznosi u', rate_row: 'Kurs', pair_row: 'Valute projekta',
+    sort_by_date: 'Po datumu', sort_by_category: 'Po kategoriji', sort_by_name: 'Po nazivu',
     section_danger: 'opasna zona',
     delete_project: 'obriši projekat',
     back: 'nazad',
@@ -797,6 +825,9 @@ const I18N = {
     ai_format_off: 'last AI entry: response template not accepted, fallback used.',
     ai_format_reason: 'reason',
     version_label: 'version',
+    hd_project: 'Project', hd_search: 'Search', hd_currency: 'Currency', hd_sort: 'Sort',
+    amounts_in: 'Amounts in', rate_row: 'Rate', pair_row: 'Project currencies',
+    sort_by_date: 'By date', sort_by_category: 'By category', sort_by_name: 'By name',
     section_danger: 'danger zone',
     delete_project: 'delete project',
     back: 'back',
@@ -1040,6 +1071,8 @@ const ICONS = {
   gear:'<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
   swap:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h12l-3-3M17 17H5l3 3"/></svg>',
   chat:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.1A8 8 0 1 1 20 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/></svg>',
+  folderPlus:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A2 2 0 0 1 5 5.5h4l2 2h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10.5V16M9.25 13.25h5.5"/></svg>',
+  sort:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M4 7l3-3 3 3M17 20V4M14 17l3 3 3-3"/></svg>',
   send:'<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6l.1 6.5L15 12 3.5 13.9z"/></svg>'
 };
 function ic(emoji, svgKey){ return '<span class="ic-emoji">'+emoji+'</span>'+ICONS[svgKey]; }
@@ -1620,27 +1653,6 @@ function render(){
     }
   }
 
-  const curToggleHtml = used.length>1 ? (
-    '<div class="cur-toggle">'+
-    used.map(c=>'<button class="'+(c===dispCur?'active':'')+'" onclick="setDisplayCurrency(\''+c+'\')">'+c.toLowerCase()+'</button>').join('')+
-    '</div>'
-  ) : '';
-
-  const rateBarHtml = otherCurrencies.length>0 ? (
-    otherCurrencies.map(c=>{
-      /* kurs se uvek prikazuje kao "1 jača valuta = X slabije" (npr. eur 117),
-         da ne bi pisalo 0 kada je 1 dinar manje od pola evra */
-      let from=c, to=dispCur;
-      if(rates[pairKey(c,dispCur)] && convert(1,c,dispCur) < 1){ from=dispCur; to=c; }
-      const has = !!rates[pairKey(c,dispCur)];
-      return '<div class="rate-icon-btn" onclick="openRateModal(\''+c+'\',\''+dispCur+'\')" title="1 '+from.toLowerCase()+' = '+(has ? fmtNum(convert(1,from,to)) : '?')+' '+to.toLowerCase()+'">'+
-      '<span class="ri-ic">'+from.toLowerCase()+'</span>'+
-      '<span class="ri-val">'+(has ? Math.round(convert(1,from,to)) : '?')+'</span></div>';
-    }).join('')+
-    curToggleHtml+
-    '<button class="icon-btn" onclick="openCurrencyPairModal()" title="izaberi valute" style="font-size:14px;">'+ic('&#8646;','swap')+'</button>'
-  ) : '';
-
   let pendingHtml = '';
   if(pendingItems){
     if(pendingPct>=0){
@@ -1680,24 +1692,21 @@ function render(){
   app.innerHTML =
     '<div class="topbar">'+
     backupReminderHtml()+
-    '<div class="tb-row">'+
-    '<div class="project-switch" style="flex:1;" onclick="openProjectSwitcher()">'+
-    '<span class="name">'+escapeHtml(proj.name)+'</span>'+
-    '<span class="proj-date-inline" onclick="event.stopPropagation(); openDateModal();">'+dmyFromISO(proj.activeDate)+'</span>'+
-    '<span class="chev">▾</span>'+
+    '<div class="hd-row">'+
+    '<div class="hd-title" onclick="openProjectSwitcher()">'+
+    '<span class="hd-mark"></span>'+
+    '<span class="hd-name">'+escapeHtml(proj.name)+'</span><span class="hd-chev">▾</span>'+
+    '<span class="hd-date" onclick="event.stopPropagation(); openDateModal();">'+dmyFromISO(proj.activeDate)+'</span>'+
     '</div>'+
-    '<button class="icon-btn" onclick="openNewProjectForm()" title="'+t('new_project')+'">'+ic('➕','plus')+'</button>'+
-    '<button class="icon-btn" onclick="toggleSearch()" title="'+t('search')+'">'+(searchOpen?ic('✕','close'):ic('🔍','search'))+'</button>'+
     '<button class="icon-btn" onclick="openProjectSettings()" title="'+t('settings')+'">'+ic('⚙','gear')+'</button>'+
     '</div>'+
-    (searchOpen ? '<div class="search-row"><input type="text" id="searchInput" value="'+escapeHtml(searchQuery)+'" placeholder="'+t('search_placeholder')+'" oninput="setSearchQuery(this.value)"><button class="search-close-btn" onclick="toggleSearch()">✕</button></div>' : '')+
-    '<div class="tb-row" style="margin-top:7px;">'+
-    '<div class="rate-row">'+rateBarHtml+
-    '<div class="view-toggle" style="flex:1;">'+
-    '<button class="'+(viewMode==='datum'?'active':'')+'" onclick="setViewMode(\'datum\')">'+t('date')+'</button>'+
-    '<button class="'+(viewMode==='kategorija'?'active':'')+'" onclick="setViewMode(\'kategorija\')">'+t('category')+'</button>'+
-    '<button class="'+(viewMode==='naziv'?'active':'')+'" onclick="setViewMode(\'naziv\')">'+t('view_by_name')+'</button>'+
-    '</div></div></div>'+
+    (searchOpen ? '<div class="hd-search">'+'<div class="search-row"><input type="text" id="searchInput" value="'+escapeHtml(searchQuery)+'" placeholder="'+t('search_placeholder')+'" oninput="setSearchQuery(this.value)"><button class="search-close-btn" onclick="toggleSearch()">✕</button></div></div>' :
+    '<div class="hd-icons">'+
+    '<button class="hd-ico" onclick="openNewProjectForm()"><span class="icon-btn hd-sq">'+ic('📁','folderPlus')+'</span><span class="hd-tx">'+t('hd_project')+'</span></button>'+
+    '<button class="hd-ico" onclick="toggleSearch()"><span class="icon-btn hd-sq">'+ic('🔍','search')+'</span><span class="hd-tx">'+t('hd_search')+'</span></button>'+
+    '<button class="hd-ico" onclick="openCurrencyWindow()"><span class="icon-btn hd-sq">'+headerRateHtml(dispCur, otherCurrencies)+'</span><span class="hd-tx">'+t('hd_currency')+'</span></button>'+
+    '<button class="hd-ico" onclick="openSortWindow()"><span class="icon-btn hd-sq">'+ic('↕️','sort')+'</span><span class="hd-tx">'+t('hd_sort')+'</span></button>'+
+    '</div>')+
     '<div class="tb-row" style="margin-top:7px;">'+
     (groupKeys.length>0 ? ('<div class="tr2-total"><span class="tr2-left"><span class="tr2-proj">'+t('total')+'</span><span class="tr2-label">'+entries.length+' '+t('items_short')+'</span></span><span class="tr2-val num">'+amtHtml(fmtAmt(grandTotal), (dispCur||'').toLowerCase())+'</span></div>') : '')+
     '</div>'+
@@ -2474,6 +2483,49 @@ function openRateModal(curA, curB){
   appendModalBackdrop(backdrop, closeModal);
   backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
   setTimeout(()=>{ const el=document.getElementById('rateInput'); if(el){ el.focus(); el.select(); } }, 100);
+}
+
+/* ---------- v3: kvadrat Valuta (zadati kurs) i prozori Valuta / Sortiraj ---------- */
+/* isti obračun kao stari taster kursa: "1 jača valuta = X slabije", bez obzira u kojoj valuti su iznosi */
+function rateInfo(c, dispCur){
+  let from=c, to=dispCur;
+  const has = !!rates[pairKey(c,dispCur)];
+  if(has && convert(1,c,dispCur) < 1){ from=dispCur; to=c; }
+  return { from: from, to: to, has: has, val: has ? convert(1,from,to) : null };
+}
+function headerRateHtml(dispCur, others){
+  if(!others || !others.length) return '<span class="hd-rate"><span class="hr-v">'+escapeHtml(dispCur.toLowerCase())+'</span></span>';
+  const r = rateInfo(others[0], dispCur);
+  return '<span class="hd-rate"><span class="hr-c">'+r.from.toLowerCase()+'</span><span class="hr-v num">'+(r.has ? Math.round(r.val) : '?')+'</span></span>';
+}
+function currencyWindowBody(){
+  const dispCur = displayCurrency();
+  const used = usedCurrencies();
+  const others = used.filter(c=>c!==dispCur);
+  const toggle = '<div class="cur-toggle">'+used.map(c=>'<button class="'+(c===dispCur?'active':'')+'" onclick="event.stopPropagation(); setDisplayCurrency(\''+c+'\'); refreshCurrencyWindow();">'+c.toLowerCase()+'</button>').join('')+'</div>';
+  const rateRows = others.map(c=>{
+    const r = rateInfo(c, dispCur);
+    return '<div class="pick-row" onclick="openRateModal(\''+c+'\',\''+dispCur+'\')"><span>'+t('rate_row')+'</span><span class="pv acc">1 '+r.from.toLowerCase()+' = '+(r.has ? fmtNum(r.val) : '?')+' '+r.to.toLowerCase()+' ›</span></div>';
+  }).join('');
+  return '<div class="pick-row" style="cursor:default;"><span>'+t('amounts_in')+'</span>'+toggle+'</div>'+
+    rateRows+
+    '<div class="pick-row" onclick="openCurrencyPairModal()"><span>'+t('pair_row')+'</span><span class="pv">'+used.join(' · ')+' ›</span></div>';
+}
+function openCurrencyWindow(){
+  const backdrop=document.createElement('div'); backdrop.className='modal-backdrop small-modal'; backdrop.id='modalBackdrop';
+  backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button><h2>'+t('hd_currency')+'</h2><div id="curWinBody">'+currencyWindowBody()+'</div></div>';
+  appendModalBackdrop(backdrop, closeModal);
+  backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
+}
+function refreshCurrencyWindow(){ const b=document.getElementById('curWinBody'); if(b) b.innerHTML = currencyWindowBody(); }
+function openSortWindow(){
+  const opts = [['datum','sort_by_date'],['kategorija','sort_by_category'],['naziv','sort_by_name']];
+  const backdrop=document.createElement('div'); backdrop.className='modal-backdrop small-modal'; backdrop.id='modalBackdrop';
+  backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button><h2>'+t('hd_sort')+'</h2>'+
+    opts.map(o=>'<div class="pick-row" onclick="closeModal(); setViewMode(\''+o[0]+'\');"><span>'+t(o[1])+'</span><span class="ok">'+(viewMode===o[0]?'✓':'')+'</span></div>').join('')+
+    '</div>';
+  appendModalBackdrop(backdrop, closeModal);
+  backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
 }
 
 /* ---------- MODAL: izbor para valuta (kao menjacnica - bira se tacno dve) ---------- */
