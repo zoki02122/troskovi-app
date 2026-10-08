@@ -532,6 +532,17 @@ html[data-theme="ponoc"]{
 html[data-theme="banka"]{ --warm:#FBF8F1; --warm-line:#E6D6B0; --rate-bg:#FFFFFF; --accent:#0E2747; --on-accent:#fff; --on-gold:#fff; --chat-soft:#F4F1EA; --chat-soft-line:#E6E1D6; }
 html[data-theme="crna"]{ color-scheme:dark; --coral:#D0604A; --warm:#2A2721; --warm-line:#5A4E36; --rate-bg:#26262A; --accent:#CDB27A; --on-accent:#1B1B1E; --on-gold:#1B1B1E; --chat-soft:#303035; --chat-soft-line:#3A3A40; }
 html[data-theme="koza"]{ --warm:#F4ECDA; --warm-line:#D9C49A; --rate-bg:#F8F3E8; --accent:#1F3A2E; --on-accent:#EAD6A2; --on-gold:#fff; --chat-soft:#EDE4D0; --chat-soft-line:#D9CDB4; }
+/* v5: okvir iskačućih prozora u boji teme; polje u fokusu mirno sivo; osenčen tekst */
+.modal-backdrop:not(.settings-screen) .modal{ border:1px solid color-mix(in srgb, var(--hd-acc, var(--blue-deep)) 60%, transparent); }
+:root{ --focus-line:#A3A7AF; }
+[data-theme="ponoc"], [data-theme="crna"]{ --focus-line:#6E7178; }
+input:focus, textarea:focus{ outline:1.5px solid var(--focus-line) !important; outline-offset:-1px; }
+input::selection, textarea::selection{ background:color-mix(in srgb, var(--hd-acc, var(--blue-deep)) 40%, transparent); }
+.modal-ur{ position:absolute; top:16px; right:54px; display:flex; gap:8px; z-index:5; }
+.ur-btn{ width:30px; height:30px; border-radius:50%; border:none; background:var(--bg-card); color:var(--text); display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0; }
+.ur-btn svg{ width:17px; height:17px; }
+.ur-btn:disabled{ opacity:.35; cursor:default; }
+.modal h2.has-ur{ padding-right:120px; }
 /* v4: kartica ukupno za vreme pretrage — isprekidan okvir, natpis „pronađeno: …“ */
 .tr2-total.is-search{ border:1.5px dashed var(--hd-search-b, var(--hd-acc, var(--blue-deep))) !important; }
 [data-theme="klasicna"], [data-theme="banka"]{ --hd-search-b:var(--gold); }
@@ -679,7 +690,7 @@ const I18N = {
     ai_format_off: 'poslednji AI unos: obrazac odgovora nije prihvaćen, korišćen rezervni način.',
     ai_format_reason: 'razlog',
     version_label: 'verzija',
-    found_label: 'pronađeno',
+    found_label: 'pronađeno', undo: 'korak nazad', redo: 'korak napred',
     hd_project: 'Projekat', hd_search: 'Pretraži', hd_currency: 'Valuta', hd_sort: 'Sortiraj',
     amounts_in: 'Iznosi u', rate_row: 'Kurs', pair_row: 'Valute projekta',
     sort_by_date: 'Po datumu', sort_by_category: 'Po kategoriji', sort_by_name: 'Po nazivu',
@@ -832,7 +843,7 @@ const I18N = {
     ai_format_off: 'last AI entry: response template not accepted, fallback used.',
     ai_format_reason: 'reason',
     version_label: 'version',
-    found_label: 'found',
+    found_label: 'found', undo: 'undo', redo: 'redo',
     hd_project: 'Project', hd_search: 'Search', hd_currency: 'Currency', hd_sort: 'Sort',
     amounts_in: 'Amounts in', rate_row: 'Rate', pair_row: 'Project currencies',
     sort_by_date: 'By date', sort_by_category: 'By category', sort_by_name: 'By name',
@@ -1081,8 +1092,130 @@ const ICONS = {
   chat:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.1A8 8 0 1 1 20 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/></svg>',
   folderPlus:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A2 2 0 0 1 5 5.5h4l2 2h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10.5V16M9.25 13.25h5.5"/></svg>',
   sort:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M4 7l3-3 3 3M17 20V4M14 17l3 3 3-3"/></svg>',
+  undo:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>',
+  redo:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>',
   send:'<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6l.1 6.5L15 12 3.5 13.9z"/></svg>'
 };
+
+/* ---------- v5: polja — brojevi sa zarezom, osenčen tekst na prvi dodir, Gboard zaštita (po uzoru na Arhivu) ---------- */
+function parseNum(v){ return parseFloat(String(v==null?'':v).replace(/\s/g,'').replace(',', '.')); }
+function numToField(n){ return (n===null || n===undefined || n==='') ? '' : String(n).replace('.', ','); }
+/* svako novo polje odmah dobija pravila za tastaturu (pre nego što se otvori tastatura) */
+const TEXT_TYPES = ['text','search','tel','url','email','password',''];
+function fieldAttrs(el){
+  if(!el || !el.matches || !el.matches('input, textarea')) return;
+  if(el.tagName==='INPUT' && TEXT_TYPES.indexOf((el.getAttribute('type')||'').toLowerCase())<0) return;
+  [['autocomplete','off'],['autocorrect','off'],['autocapitalize','off'],['spellcheck','false']].forEach(a=>{ if(!el.hasAttribute(a[0])) el.setAttribute(a[0],a[1]); });
+}
+new MutationObserver(muts=>{
+  muts.forEach(m=>m.addedNodes.forEach(n=>{
+    if(n.nodeType!==1) return;
+    fieldAttrs(n);
+    if(n.querySelectorAll) n.querySelectorAll('input, textarea').forEach(fieldAttrs);
+  }));
+}).observe(document.documentElement, { childList:true, subtree:true });
+/* polja u kojima se tek piše (unos, čet, pretrage) se ne označavaju na dodir */
+const NO_SELECT_IDS = ['manualInput','chatInput','searchInput','projSearchInput'];
+const fieldOriginal = new WeakMap();   /* poslednja dobra vrednost pri dodiru */
+const pristineArmed = new WeakSet();   /* ceo tekst je označen i još se ništa nije kucalo */
+function selectableField(el){
+  if(!el || !el.matches || !el.matches('input, textarea')) return false;
+  if(el.readOnly || el.disabled || NO_SELECT_IDS.indexOf(el.id)>=0) return false;
+  return el.tagName==='TEXTAREA' || TEXT_TYPES.indexOf((el.getAttribute('type')||'').toLowerCase())>=0;
+}
+let _focusNoSelect = null;   /* fokus koji daje ↶ ↷ ne označava tekst */
+document.addEventListener('focusin', (e)=>{
+  const el = e.target;
+  if(!selectableField(el)) return;
+  if(_focusNoSelect===el){ _focusNoSelect = null; return; }
+  fieldOriginal.set(el, el.value);
+  pristineArmed.add(el);
+  setTimeout(()=>{ try{ if(document.activeElement===el){ el.select(); pristineArmed.add(el); } }catch(x){} }, 0);
+});
+document.addEventListener('focusout', (e)=>{ pristineArmed.delete(e.target); });
+/* zaštita važi samo dok je CEO tekst zaista označen; drugi dodir (kursor) = brisanje slovo po slovo */
+document.addEventListener('beforeinput', (e)=>{
+  const el = e.target;
+  if(!pristineArmed.has(el)) return;
+  let whole = false;
+  try{ whole = el.value.length>0 && el.selectionStart===0 && el.selectionEnd===el.value.length; }catch(x){}
+  if(!whole) pristineArmed.delete(el);
+}, true);
+document.addEventListener('input', (e)=>{
+  const el = e.target;
+  if(!pristineArmed.has(el)) return;
+  pristineArmed.delete(el);
+  if(!e.inputType || e.inputType.indexOf('delete')!==0) return;
+  const original = fieldOriginal.get(el);
+  if(typeof original!=='string') return;
+  /* Gboard ponekad na „obriši“ skine samo kraj označenog teksta: polje se isprazni kako je korisnik hteo */
+  if(el.value!=='' && el.value.length<original.length && original.indexOf(el.value)===0){
+    el.value = '';
+    el.dispatchEvent(new Event('input', { bubbles:true }));
+  }
+}, true);
+/* ---------- v5: ↶ ↷ u prozoru „izmeni stavku“ — kucanje reč po reč (razmak ili pauza 0,7 s = korak) ---------- */
+const EDIT_FIELDS = ['eD','eM','eY','editOpis','editIznos','editValuta','editKategorija','editNapomena'];
+let _edUr = null;
+function edSnap(){ return EDIT_FIELDS.map(id=>{ const el=document.getElementById(id); return el?el.value:''; }); }
+function edBtns(){
+  const u=document.getElementById('edUndo'), r=document.getElementById('edRedo');
+  if(!u || !r || !_edUr) return;
+  u.disabled = _edUr.i<=0 && !_edUr.tm;
+  r.disabled = _edUr.i>=_edUr.list.length-1;
+}
+function edCommit(){
+  if(!_edUr) return;
+  clearTimeout(_edUr.tm); _edUr.tm = 0;
+  const snap = edSnap(), cur = _edUr.list[_edUr.i];
+  if(JSON.stringify(snap)!==JSON.stringify(cur)){
+    _edUr.list = _edUr.list.slice(0, _edUr.i+1);
+    _edUr.list.push(snap);
+    if(_edUr.list.length>101) _edUr.list.shift();
+    _edUr.i = _edUr.list.length-1;
+  }
+  edBtns();
+}
+function edStep(d){
+  if(!_edUr) return;
+  edCommit();
+  const j = _edUr.i + d;
+  if(j<0 || j>=_edUr.list.length) return;
+  const old = _edUr.list[_edUr.i], nv = _edUr.list[j];
+  _edUr.i = j;
+  let changed = null;
+  EDIT_FIELDS.forEach((id,k)=>{ const el=document.getElementById(id); if(!el) return; el.value = nv[k]; if(old[k]!==nv[k] && changed===null) changed = k; });
+  if(changed!==null){
+    const el = document.getElementById(EDIT_FIELDS[changed]), o = old[changed], n = nv[changed];
+    /* kursor na kraj dela koji se promenio; polje ostaje u fokusu (tastatura ostaje) */
+    let b = 0; while(b<o.length && b<n.length && o[o.length-1-b]===n[n.length-1-b]) b++;
+    const c = n.length - b;
+    if(document.activeElement!==el){ _focusNoSelect = el; el.focus(); }
+    try{ el.setSelectionRange(c, c); }catch(x){}
+    pristineArmed.delete(el);
+  }
+  edBtns();
+}
+function edInit(){
+  _edUr = { list:[edSnap()], i:0, tm:0 };
+  const modal = document.querySelector('#modalBackdrop .modal');
+  if(!modal) return;
+  modal.addEventListener('input', (e)=>{
+    if(!_edUr || EDIT_FIELDS.indexOf(e.target.id)<0) return;
+    clearTimeout(_edUr.tm);
+    if(e.data && /\s/.test(e.data)) edCommit();
+    else { _edUr.tm = setTimeout(edCommit, 700); edBtns(); }
+  });
+  ['edUndo','edRedo'].forEach(id=>{
+    const b = document.getElementById(id);
+    /* dugme ne uzima fokus — tastatura ostaje otvorena */
+    b.addEventListener('mousedown', ev=>ev.preventDefault());
+    b.addEventListener('pointerdown', ev=>ev.preventDefault());
+    b.addEventListener('click', ()=>edStep(id==='edUndo'?-1:1));
+  });
+  edBtns();
+}
+
 function ic(emoji, svgKey){ return '<span class="ic-emoji">'+emoji+'</span>'+ICONS[svgKey]; }
 /* iznos + valuta (valuta u posebnom span-u da je teme mogu stilizovati) */
 function amtHtml(amountText, cur){ return amountText+'<span class="cur"> '+cur+'</span>'; }
@@ -1148,7 +1281,7 @@ function loadProjectData(pid){
 }
 function persistEntries(){ lsSet('entries:'+currentProjectId, JSON.stringify(entries)); }
 function persistRates(){ lsSet('rates:'+currentProjectId, JSON.stringify(rates)); }
-const APP_VERSION = 4; /* svaka objava: +1, i isti broj u linku ?v=N */
+const APP_VERSION = 5; /* svaka objava: +1, i isti broj u linku ?v=N */
 function getApiKey(){ const k = lsGet('app:apiKey'); return k ? k.value : ''; }
 function setApiKey(key){ lsSet('app:apiKey', key); }
 /* ishod poslednjeg AI unosa: koji oblik zahteva je server prihvatio i zašto je odbio ostale */
@@ -1216,7 +1349,7 @@ function saveLastGlobalRate(key, val){
   lsSet('app:lastRates', JSON.stringify(all));
 }
 function setRate(curA, curB, val){
-  const v = parseFloat(val);
+  const v = parseNum(val);
   if(!isNaN(v) && v>0){
     const key = pairKey(curA,curB);
     rates[key]=v; persistRates();
@@ -1519,7 +1652,7 @@ function scrollToEntry(id){
 }
 function editPendingField(idx, field, value){
   if(!pendingItems) return;
-  if(field==='iznos') value = parseFloat(value)||0;
+  if(field==='iznos') value = parseNum(value)||0;
   pendingItems[idx][field]=value;
   if(pendingPct>=0 && pendingPct<100){ clearInterval(pendingTimer); pendingPct=100; }
 }
@@ -1672,7 +1805,7 @@ function render(){
       pendingHtml = '<div class="pending-card">'+
         '<div class="row">'+
         '<input class="f-opis" value="'+escapeHtml(it.opis)+'" oninput="editPendingField(0,\'opis\',this.value)">'+
-        '<input class="f-iznos" type="number" step="0.01" value="'+it.iznos+'" oninput="editPendingField(0,\'iznos\',this.value)">'+
+        '<input class="f-iznos" type="text" inputmode="decimal" value="'+numToField(it.iznos)+'" oninput="editPendingField(0,\'iznos\',this.value)">'+
         '<input class="f-valuta" value="'+it.valuta+'" oninput="editPendingField(0,\'valuta\',this.value.toUpperCase())">'+
         '</div><div class="row">'+
         '<input class="f-kat" value="'+escapeHtml(it.kategorija||'')+'" placeholder="'+t('category_placeholder')+'" oninput="editPendingField(0,\'kategorija\',this.value)">'+
@@ -1690,7 +1823,7 @@ function render(){
           return dupWarning +
           '<div class="row">'+
           '<input class="f-opis" value="'+escapeHtml(it.opis)+'" oninput="editPendingField('+idx+',\'opis\',this.value)">'+
-          '<input class="f-iznos" type="number" step="0.01" value="'+it.iznos+'" oninput="editPendingField('+idx+',\'iznos\',this.value)">'+
+          '<input class="f-iznos" type="text" inputmode="decimal" value="'+numToField(it.iznos)+'" oninput="editPendingField('+idx+',\'iznos\',this.value)">'+
           '<input class="f-valuta" value="'+it.valuta+'" oninput="editPendingField('+idx+',\'valuta\',this.value.toUpperCase())">'+
           '<button class="batch-remove" onclick="removeBatchItem('+idx+')">✕</button></div>';
         }).join('')+
@@ -2413,7 +2546,7 @@ function openSettingsSub(which){
       '<input type="file" id="backupFileInput" accept=".json" style="display:none" onchange="handleImportFile(this)">'+
       '<div class="settings-hint">'+t('backup_hint')+'</div>'+
       '<div class="settings-card" style="margin-top:14px;">'+
-      '<div class="settings-field"><label>'+t('backup_interval_label')+'</label><input type="number" inputmode="numeric" min="1" id="backupIntervalInput" value="'+getBackupIntervalDays()+'" oninput="saveBackupInterval(this.value)" autocomplete="off"></div>'+
+      '<div class="settings-field"><label>'+t('backup_interval_label')+'</label><input type="text" inputmode="numeric" id="backupIntervalInput" value="'+getBackupIntervalDays()+'" oninput="saveBackupInterval(this.value)" autocomplete="off"></div>'+
       '</div>'+
       '<div class="settings-hint">'+t('backup_interval_hint')+'</div>'+
       '<div class="settings-hint" id="lastBackupHint">'+t('last_backup_label')+': '+lastBackupDisplay()+'</div>';
@@ -2490,7 +2623,7 @@ function openRateModal(curA, curB){
   const existing = rates[key] || lastGlobal[key] || '';
   const backdrop=document.createElement('div'); backdrop.className='modal-backdrop small-modal'; backdrop.id='modalBackdrop';
   backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button><h2>'+t('rate_title')+'</h2>'+
-    '<div class="field"><label>1 '+a+' = '+t('rate_how_much')+' '+b+'?</label><input type="number" step="0.01" id="rateInput" value="'+(existing||'')+'" placeholder="'+t('rate_placeholder')+'" autofocus onkeydown="if(event.key===\'Enter\'){ event.preventDefault(); setRate(\''+a+'\',\''+b+'\', this.value); }"></div>'+
+    '<div class="field"><label>1 '+a+' = '+t('rate_how_much')+' '+b+'?</label><input type="text" inputmode="decimal" id="rateInput" value="'+(existing?numToField(existing):'')+'" placeholder="'+t('rate_placeholder')+'" autofocus onkeydown="if(event.key===\'Enter\'){ event.preventDefault(); setRate(\''+a+'\',\''+b+'\', this.value); }"></div>'+
     '<div class="modal-actions"><button class="cancel-btn" onclick="closeModal()">'+t('cancel')+'</button><button class="create-btn" onclick="setRate(\''+a+'\',\''+b+'\', document.getElementById(\'rateInput\').value)">'+t('save')+'</button></div></div>';
   appendModalBackdrop(backdrop, closeModal);
   backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
@@ -2565,9 +2698,9 @@ function openDateModal(){
   const parts = proj.activeDate.split('-'); const y=parts[0], m=parts[1], d=parts[2];
   const backdrop=document.createElement('div'); backdrop.className='modal-backdrop small-modal'; backdrop.id='modalBackdrop';
   backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button><h2>'+t('date_modal_title')+'</h2><div class="date-trio">'+
-    '<input class="dd" type="number" id="dtD" value="'+parseInt(d)+'" min="1" max="31" placeholder="DD">'+
-    '<input class="mm" type="number" id="dtM" value="'+parseInt(m)+'" min="1" max="12" placeholder="MM">'+
-    '<input class="yy" type="number" id="dtY" value="'+y+'" min="2000" max="2100" placeholder="GGGG"></div>'+
+    '<input class="dd" type="text" inputmode="numeric" id="dtD" value="'+parseInt(d)+'" min="1" max="31" placeholder="DD">'+
+    '<input class="mm" type="text" inputmode="numeric" id="dtM" value="'+parseInt(m)+'" min="1" max="12" placeholder="MM">'+
+    '<input class="yy" type="text" inputmode="numeric" id="dtY" value="'+y+'" min="2000" max="2100" placeholder="GGGG"></div>'+
     '<div class="modal-actions" style="margin-top:16px;"><button class="cancel-btn" onclick="closeModal()">'+t('cancel')+'</button><button class="create-btn" onclick="saveDateModal()">'+t('save')+'</button></div></div>';
   appendModalBackdrop(backdrop, closeModal);
   backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
@@ -2584,13 +2717,13 @@ function openEditEntry(id){
   const e = entries.find(x=>x.id===id); if(!e) return;
   const parts = e.datum.split('-'); const y=parts[0], m=parts[1], d=parts[2];
   const backdrop=document.createElement('div'); backdrop.className='modal-backdrop'; backdrop.id='modalBackdrop';
-  backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button><h2>'+t('edit_entry_title')+'</h2>'+
+  backdrop.innerHTML = '<div class="modal"><div class="modal-ur"><button type="button" class="ur-btn" id="edUndo" disabled title="'+t('undo')+'">'+ICONS.undo+'</button><button type="button" class="ur-btn" id="edRedo" disabled title="'+t('redo')+'">'+ICONS.redo+'</button></div><button class="modal-close-x" onclick="closeModal()">✕</button><h2 class="has-ur">'+t('edit_entry_title')+'</h2>'+
     '<div class="field"><label>'+t('date')+'</label><div class="date-trio">'+
-    '<input class="dd" type="number" id="eD" value="'+parseInt(d)+'" min="1" max="31">'+
-    '<input class="mm" type="number" id="eM" value="'+parseInt(m)+'" min="1" max="12">'+
-    '<input class="yy" type="number" id="eY" value="'+y+'" min="2000" max="2100"></div></div>'+
+    '<input class="dd" type="text" inputmode="numeric" id="eD" value="'+parseInt(d)+'" min="1" max="31">'+
+    '<input class="mm" type="text" inputmode="numeric" id="eM" value="'+parseInt(m)+'" min="1" max="12">'+
+    '<input class="yy" type="text" inputmode="numeric" id="eY" value="'+y+'" min="2000" max="2100"></div></div>'+
     '<div class="field"><label>'+t('label_description')+'</label><input type="text" id="editOpis" value="'+escapeHtml(e.opis)+'"></div>'+
-    '<div class="field"><label>'+t('label_amount')+'</label><input type="number" step="0.01" id="editIznos" value="'+e.iznos+'"></div>'+
+    '<div class="field"><label>'+t('label_amount')+'</label><input type="text" inputmode="decimal" id="editIznos" value="'+numToField(e.iznos)+'"></div>'+
     '<div class="field"><label>'+t('label_currency')+'</label><input type="text" id="editValuta" value="'+e.valuta+'" style="text-transform:uppercase;"></div>'+
     '<div class="field"><label>'+t('category')+'</label><input type="text" id="editKategorija" value="'+escapeHtml(e.kategorija||'')+'"></div>'+
     '<div class="field"><label>'+t('label_note')+'</label><input type="text" id="editNapomena" value="'+escapeHtml(e.napomena||'')+'"></div>'+
@@ -2598,13 +2731,14 @@ function openEditEntry(id){
     '<button class="create-btn" onclick="saveEntryFromModal(\''+id+'\')">'+t('save')+'</button></div></div>';
   appendModalBackdrop(backdrop, closeModal);
   backdrop.addEventListener('click',(ev)=>{ if(ev.target===backdrop) closeModal(); });
+  edInit();
 }
 function saveEntryFromModal(id){
   const d=parseInt(document.getElementById('eD').value)||1;
   const m=parseInt(document.getElementById('eM').value)||1;
   const y=parseInt(document.getElementById('eY').value)||new Date().getFullYear();
   const opis=document.getElementById('editOpis').value.trim();
-  const iznos=parseFloat(document.getElementById('editIznos').value)||0;
+  const iznos=parseNum(document.getElementById('editIznos').value)||0;
   const valuta=document.getElementById('editValuta').value.trim().toUpperCase();
   const kategorija=document.getElementById('editKategorija').value.trim()||'ostalo';
   const napomena=document.getElementById('editNapomena').value.trim();
