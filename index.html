@@ -644,6 +644,9 @@ const I18N = {
     save_key: 'sačuvaj ključ',
     delete: 'obriši',
     key_hint: 'ključ se čuva samo na ovom telefonu, u ovom pregledaču. napraviš ga besplatno na aistudio.google.com (bez kartice) → Get API key.',
+    ai_format_on: 'poslednji AI unos: obrazac odgovora primenjen ✓',
+    ai_format_off: 'poslednji AI unos: obrazac odgovora nije prihvaćen, korišćen rezervni način.',
+    ai_format_reason: 'razlog',
     section_danger: 'opasna zona',
     delete_project: 'obriši projekat',
     back: 'nazad',
@@ -789,6 +792,9 @@ const I18N = {
     save_key: 'save key',
     delete: 'delete',
     key_hint: 'the key is stored only on this phone, in this browser. get one for free at aistudio.google.com (no card needed) → Get API key.',
+    ai_format_on: 'last AI entry: response template applied ✓',
+    ai_format_off: 'last AI entry: response template not accepted, fallback used.',
+    ai_format_reason: 'reason',
     section_danger: 'danger zone',
     delete_project: 'delete project',
     back: 'back',
@@ -1101,6 +1107,19 @@ function persistEntries(){ lsSet('entries:'+currentProjectId, JSON.stringify(ent
 function persistRates(){ lsSet('rates:'+currentProjectId, JSON.stringify(rates)); }
 function getApiKey(){ const k = lsGet('app:apiKey'); return k ? k.value : ''; }
 function setApiKey(key){ lsSet('app:apiKey', key); }
+/* ishod poslednjeg AI unosa: koji oblik zahteva je server prihvatio i zašto je odbio ostale */
+function saveAiFormatStatus(mode, rejections){
+  lsSet('app:aiFormatStatus', JSON.stringify({ mode: mode, reasons: rejections || [], at: new Date().toISOString() }));
+}
+function aiFormatStatusHtml(){
+  const r = lsGet('app:aiFormatStatus');
+  if(!r) return '';
+  let st; try{ st = JSON.parse(r.value); }catch(e){ return ''; }
+  if(!st || !st.mode) return '';
+  let txt = st.mode==='bez' ? t('ai_format_off') : t('ai_format_on');
+  if(st.mode!=='format' && st.reasons && st.reasons.length) txt += ' '+t('ai_format_reason')+': '+st.reasons.join(' | ');
+  return '<div class="settings-hint" id="aiFormatHint">'+escapeHtml(txt)+'</div>';
+}
 
 /* ---------- CURRENCY ---------- */
 function currentProject(){ return projects.find(p=>p.id===currentProjectId); }
@@ -1255,35 +1274,68 @@ async function callGeminiForExpenses(contentPart, isAudio, isImage){
   const apiKey = getApiKey();
   if(!apiKey){ throw new Error('nije unet Gemini API ključ. idi u podešavanja (⚙) i unesi ga.'); }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(()=>controller.abort(), 20000);
-  let resp;
-  const __t0 = performance.now();
   const parts = Array.isArray(contentPart) ? contentPart : [contentPart];
-  try{
-    resp = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key="+encodeURIComponent(apiKey), {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: sys }] },
-        contents: [{ role:"user", parts: parts }],
-        generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8000 }
-      }),
-      signal: controller.signal
-    });
-  } catch(fetchErr){
-    if(fetchErr.name === 'AbortError'){
-      throw new Error(t('server_timeout'));
+  /* Obrazac odgovora (šema). Zvanična dokumentacija piše mimeType 'application/json', a server za
+     responseFormat.text traži nabrojanu vrednost APPLICATION_JSON (provereno u Arhivi, v77). Zato redom:
+     1) responseFormat + APPLICATION_JSON, 2) responseMimeType + responseJsonSchema (zvanični primer),
+     3) stari zahtev bez šeme. Sledeći pokušaj samo kad server ODBIJE zahtev (400). */
+  const schema = {
+    type:'array',
+    items:{
+      type:'object',
+      properties:{
+        opis:{ type:'string', description:'kratak opis troška' },
+        iznos:{ type:'number' },
+        valuta:{ type:'string', description:'ISO kod valute, 3 slova' },
+        kategorija:{ type:'string' },
+        napomena:{ type:'string' },
+        datum:{ type:'string', description:'GGGG-MM-DD, samo ako je datum pomenut' }
+      },
+      required:['opis','iznos','valuta','kategorija']
     }
-    throw new Error(t('cannot_connect_ai') + ' ' + (fetchErr.message || fetchErr));
-  } finally {
-    clearTimeout(timeoutId);
-  }
-  window.__lastCallMs = Math.round(performance.now() - __t0);
-  if(!resp.ok){
+  };
+  const attempts = [
+    { mode:'format', gc:{ responseFormat:{ text:{ mimeType:'APPLICATION_JSON', schema: schema } }, maxOutputTokens: 8000 } },
+    { mode:'jsonSchema', gc:{ responseMimeType:'application/json', responseJsonSchema: schema, maxOutputTokens: 8000 } },
+    { mode:'bez', gc:{ responseMimeType:'application/json', maxOutputTokens: 8000 } }
+  ];
+  const rejections = [];
+  let resp, usedMode = '';
+  const __t0 = performance.now();
+  for(let i=0; i<attempts.length; i++){
+    const controller = new AbortController();
+    const timeoutId = setTimeout(()=>controller.abort(), 20000);
+    try{
+      resp = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key="+encodeURIComponent(apiKey), {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: sys }] },
+          contents: [{ role:"user", parts: parts }],
+          generationConfig: attempts[i].gc
+        }),
+        signal: controller.signal
+      });
+    } catch(fetchErr){
+      if(fetchErr.name === 'AbortError'){
+        throw new Error(t('server_timeout'));
+      }
+      throw new Error(t('cannot_connect_ai') + ' ' + (fetchErr.message || fetchErr));
+    } finally {
+      clearTimeout(timeoutId);
+    }
+    if(resp.ok){ usedMode = attempts[i].mode; break; }
     const errBody = await resp.text();
+    if(resp.status === 400 && i < attempts.length-1){
+      let msg = errBody;
+      try{ const j = JSON.parse(errBody); if(j && j.error && j.error.message) msg = j.error.message; }catch(e){}
+      rejections.push(String(msg).slice(0,300));
+      continue;
+    }
     throw new Error('Gemini API greška ('+resp.status+'): '+errBody.slice(0,200));
   }
+  window.__lastCallMs = Math.round(performance.now() - __t0);
+  saveAiFormatStatus(usedMode, rejections);
   const data = await resp.json();
 
   if(data.promptFeedback && data.promptFeedback.blockReason){
@@ -2354,7 +2406,8 @@ function openSettingsSub(which){
       '<button class="create-btn" style="flex:1;" onclick="saveApiKey()">'+t('save_key')+'</button>'+
       '<button class="delete-btn" style="flex:none; padding-left:16px; padding-right:16px;" onclick="confirmClearApiKey()">'+t('delete')+'</button>'+
       '</div>'+
-      '<div class="settings-hint">'+t('key_hint')+'</div>';
+      '<div class="settings-hint">'+t('key_hint')+'</div>'+
+      aiFormatStatusHtml();
   } else { return; }
   m.innerHTML = settingsHeader(title, 'settingsBack')+'<div class="set-body">'+body+'</div>';
   m.scrollTop = 0;
