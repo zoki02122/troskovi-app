@@ -538,11 +538,21 @@ html[data-theme="koza"]{ --warm:#F4ECDA; --warm-line:#D9C49A; --rate-bg:#F8F3E8;
 [data-theme="ponoc"], [data-theme="crna"]{ --focus-line:#6E7178; }
 input:focus, textarea:focus{ outline:1.5px solid var(--focus-line) !important; outline-offset:-1px; }
 input::selection, textarea::selection{ background:color-mix(in srgb, var(--hd-acc, var(--blue-deep)) 40%, transparent); }
-.modal-ur{ position:absolute; top:16px; right:54px; display:flex; gap:8px; z-index:5; }
 .ur-btn{ width:30px; height:30px; border-radius:50%; border:none; background:var(--bg-card); color:var(--text); display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0; }
 .ur-btn svg{ width:17px; height:17px; }
 .ur-btn:disabled{ opacity:.35; cursor:default; }
-.modal h2.has-ur{ padding-right:120px; }
+/* v6: „otkaži“ jasno vidljivo u svim prozorima (ranije bez okvira i u boji prozora) */
+.modal-actions .cancel-btn{ background:color-mix(in srgb, var(--text) 9%, var(--surface)); border:1px solid var(--line); color:var(--text); }
+/* v6: izmeni stavku — naslov i dugmad stalno vidljivi, polja se pomeraju između njih */
+.ed-backdrop{ padding:12px; box-sizing:border-box; }
+.modal.ed-modal{ position:relative; top:auto; left:auto; transform:none; width:100%; max-height:100%; display:flex; flex-direction:column; overflow:hidden; padding:0; }
+.ed-head{ flex:none; display:flex; align-items:center; gap:8px; padding:14px 16px 12px; border-bottom:1px solid var(--line); }
+.ed-head h2{ flex:1; min-width:0; margin:0 !important; padding:0 !important; }
+.ed-head .ur-btn{ width:34px; height:34px; }
+.ed-body{ flex:1 1 auto; min-height:0; overflow-y:auto; padding:6px 18px 10px; }
+.ed-foot{ flex:none; margin:0 !important; padding:12px 16px calc(14px + env(safe-area-inset-bottom)); border-top:1px solid var(--line); }
+.ed-foot .ed-trash{ flex:none !important; width:50px; padding:0 !important; border-radius:12px; background:transparent !important; border:1.5px solid var(--coral) !important; color:var(--coral); display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.ed-foot .create-btn{ flex:1.3; }
 /* v4: kartica ukupno za vreme pretrage — isprekidan okvir, natpis „pronađeno: …“ */
 .tr2-total.is-search{ border:1.5px dashed var(--hd-search-b, var(--hd-acc, var(--blue-deep))) !important; }
 [data-theme="klasicna"], [data-theme="banka"]{ --hd-search-b:var(--gold); }
@@ -1094,6 +1104,7 @@ const ICONS = {
   sort:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M4 7l3-3 3 3M17 20V4M14 17l3 3 3-3"/></svg>',
   undo:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>',
   redo:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>',
+  trash:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 12a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>',
   send:'<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6l.1 6.5L15 12 3.5 13.9z"/></svg>'
 };
 
@@ -1133,13 +1144,35 @@ document.addEventListener('focusin', (e)=>{
   setTimeout(()=>{ try{ if(document.activeElement===el){ el.select(); pristineArmed.add(el); } }catch(x){} }, 0);
 });
 document.addEventListener('focusout', (e)=>{ pristineArmed.delete(e.target); });
-/* zaštita važi samo dok je CEO tekst zaista označen; drugi dodir (kursor) = brisanje slovo po slovo */
+/* v6: „obriši“ po uzoru na Stanje guma — u nizu polja ([data-chain]) obriši na osenčenom ili praznom polju
+   NE briše, nego vraća na prethodno polje (tekst ostaje). Drugi dodir (kursor) = slovo po slovo.
+   Polje bez prethodnog (npr. kurs): osenčeno + obriši briše ceo tekst, uz Gboard zaštitu. */
+function prevField(el){
+  const box = el.closest ? el.closest('[data-chain]') : null;
+  if(!box) return null;
+  const list = Array.from(box.querySelectorAll('input, textarea')).filter(selectableField);
+  const i = list.indexOf(el);
+  return i>0 ? list[i-1] : null;
+}
+function wholeSelected(el){
+  try{ return el.value.length>0 && el.selectionStart===0 && el.selectionEnd===el.value.length; }catch(x){ return false; }
+}
+function backToPrev(el){
+  const p = prevField(el);
+  if(!p) return false;
+  if(el.value==='') return (p.focus(), true);
+  if(pristineArmed.has(el) && wholeSelected(el)) return (p.focus(), true);
+  return false;
+}
+document.addEventListener('keydown', (e)=>{
+  if(e.key!=='Backspace' || !selectableField(e.target)) return;
+  if(backToPrev(e.target)) e.preventDefault();
+}, true);
 document.addEventListener('beforeinput', (e)=>{
   const el = e.target;
-  if(!pristineArmed.has(el)) return;
-  let whole = false;
-  try{ whole = el.value.length>0 && el.selectionStart===0 && el.selectionEnd===el.value.length; }catch(x){}
-  if(!whole) pristineArmed.delete(el);
+  if(!selectableField(el)) return;
+  if(e.inputType==='deleteContentBackward' && backToPrev(el)){ e.preventDefault(); return; }
+  if(pristineArmed.has(el) && !wholeSelected(el)) pristineArmed.delete(el);
 }, true);
 document.addEventListener('input', (e)=>{
   const el = e.target;
@@ -1148,6 +1181,14 @@ document.addEventListener('input', (e)=>{
   if(!e.inputType || e.inputType.indexOf('delete')!==0) return;
   const original = fieldOriginal.get(el);
   if(typeof original!=='string') return;
+  const p = prevField(el);
+  if(p){
+    /* Gboard je ipak obrisao (nije poslao beforeinput koji može da se zaustavi): vrati tekst i idi nazad */
+    el.value = original;
+    el.dispatchEvent(new Event('input', { bubbles:true }));
+    p.focus();
+    return;
+  }
   /* Gboard ponekad na „obriši“ skine samo kraj označenog teksta: polje se isprazni kako je korisnik hteo */
   if(el.value!=='' && el.value.length<original.length && original.indexOf(el.value)===0){
     el.value = '';
@@ -1196,6 +1237,11 @@ function edStep(d){
   }
   edBtns();
 }
+function edKeepVisible(){
+  const el = document.activeElement;
+  if(el && el.closest && el.closest('.ed-body')) try{ el.scrollIntoView({ block:'nearest' }); }catch(x){}
+}
+window.addEventListener('resize', ()=>setTimeout(edKeepVisible, 60));
 function edInit(){
   _edUr = { list:[edSnap()], i:0, tm:0 };
   const modal = document.querySelector('#modalBackdrop .modal');
@@ -1281,7 +1327,7 @@ function loadProjectData(pid){
 }
 function persistEntries(){ lsSet('entries:'+currentProjectId, JSON.stringify(entries)); }
 function persistRates(){ lsSet('rates:'+currentProjectId, JSON.stringify(rates)); }
-const APP_VERSION = 5; /* svaka objava: +1, i isti broj u linku ?v=N */
+const APP_VERSION = 6; /* svaka objava: +1, i isti broj u linku ?v=N */
 function getApiKey(){ const k = lsGet('app:apiKey'); return k ? k.value : ''; }
 function setApiKey(key){ lsSet('app:apiKey', key); }
 /* ishod poslednjeg AI unosa: koji oblik zahteva je server prihvatio i zašto je odbio ostale */
@@ -1802,7 +1848,7 @@ function render(){
   if(pendingItems){
     if(pendingPct>=0){
       const it = pendingItems[0];
-      pendingHtml = '<div class="pending-card">'+
+      pendingHtml = '<div class="pending-card" data-chain>'+
         '<div class="row">'+
         '<input class="f-opis" value="'+escapeHtml(it.opis)+'" oninput="editPendingField(0,\'opis\',this.value)">'+
         '<input class="f-iznos" type="text" inputmode="decimal" value="'+numToField(it.iznos)+'" oninput="editPendingField(0,\'iznos\',this.value)">'+
@@ -1821,7 +1867,7 @@ function render(){
           const dup = findDuplicateEntry(it);
           const dupWarning = dup ? ('<div style="font-size:10.5px;color:var(--coral);font-weight:700;margin:-3px 0 6px;">⚠ '+t('duplicate_exists')+' "'+escapeHtml(dup.opis)+' '+fmtNum(dup.iznos)+' '+dup.valuta.toLowerCase()+'" '+t('on_date')+' '+dmFromISO(dup.datum)+' - '+t('possible_duplicate')+'</div>') : '';
           return dupWarning +
-          '<div class="row">'+
+          '<div class="row" data-chain>'+
           '<input class="f-opis" value="'+escapeHtml(it.opis)+'" oninput="editPendingField('+idx+',\'opis\',this.value)">'+
           '<input class="f-iznos" type="text" inputmode="decimal" value="'+numToField(it.iznos)+'" oninput="editPendingField('+idx+',\'iznos\',this.value)">'+
           '<input class="f-valuta" value="'+it.valuta+'" oninput="editPendingField('+idx+',\'valuta\',this.value.toUpperCase())">'+
@@ -2697,7 +2743,7 @@ function openDateModal(){
   const proj = currentProject();
   const parts = proj.activeDate.split('-'); const y=parts[0], m=parts[1], d=parts[2];
   const backdrop=document.createElement('div'); backdrop.className='modal-backdrop small-modal'; backdrop.id='modalBackdrop';
-  backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button><h2>'+t('date_modal_title')+'</h2><div class="date-trio">'+
+  backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button><h2>'+t('date_modal_title')+'</h2><div class="date-trio" data-chain>'+
     '<input class="dd" type="text" inputmode="numeric" id="dtD" value="'+parseInt(d)+'" min="1" max="31" placeholder="DD">'+
     '<input class="mm" type="text" inputmode="numeric" id="dtM" value="'+parseInt(m)+'" min="1" max="12" placeholder="MM">'+
     '<input class="yy" type="text" inputmode="numeric" id="dtY" value="'+y+'" min="2000" max="2100" placeholder="GGGG"></div>'+
@@ -2716,8 +2762,12 @@ function saveDateModal(){
 function openEditEntry(id){
   const e = entries.find(x=>x.id===id); if(!e) return;
   const parts = e.datum.split('-'); const y=parts[0], m=parts[1], d=parts[2];
-  const backdrop=document.createElement('div'); backdrop.className='modal-backdrop'; backdrop.id='modalBackdrop';
-  backdrop.innerHTML = '<div class="modal"><div class="modal-ur"><button type="button" class="ur-btn" id="edUndo" disabled title="'+t('undo')+'">'+ICONS.undo+'</button><button type="button" class="ur-btn" id="edRedo" disabled title="'+t('redo')+'">'+ICONS.redo+'</button></div><button class="modal-close-x" onclick="closeModal()">✕</button><h2 class="has-ur">'+t('edit_entry_title')+'</h2>'+
+  const backdrop=document.createElement('div'); backdrop.className='modal-backdrop ed-backdrop'; backdrop.id='modalBackdrop';
+  /* v6: naslov (↶ ↷ ✕) i red dugmadi stoje stalno; između njih se pomeraju samo polja (i kad je tastatura otvorena) */
+  backdrop.innerHTML = '<div class="modal ed-modal"><div class="ed-head"><h2>'+t('edit_entry_title')+'</h2>'+
+    '<button type="button" class="ur-btn" id="edUndo" disabled title="'+t('undo')+'">'+ICONS.undo+'</button><button type="button" class="ur-btn" id="edRedo" disabled title="'+t('redo')+'">'+ICONS.redo+'</button>'+
+    '<button type="button" class="ur-btn ed-x" onclick="closeModal()" title="'+t('cancel')+'">'+ICONS.close+'</button></div>'+
+    '<div class="ed-body" data-chain>'+
     '<div class="field"><label>'+t('date')+'</label><div class="date-trio">'+
     '<input class="dd" type="text" inputmode="numeric" id="eD" value="'+parseInt(d)+'" min="1" max="31">'+
     '<input class="mm" type="text" inputmode="numeric" id="eM" value="'+parseInt(m)+'" min="1" max="12">'+
@@ -2727,7 +2777,9 @@ function openEditEntry(id){
     '<div class="field"><label>'+t('label_currency')+'</label><input type="text" id="editValuta" value="'+e.valuta+'" style="text-transform:uppercase;"></div>'+
     '<div class="field"><label>'+t('category')+'</label><input type="text" id="editKategorija" value="'+escapeHtml(e.kategorija||'')+'"></div>'+
     '<div class="field"><label>'+t('label_note')+'</label><input type="text" id="editNapomena" value="'+escapeHtml(e.napomena||'')+'"></div>'+
-    '<div class="modal-actions"><button class="delete-btn" onclick="deleteEntryFromModal(\''+id+'\')">'+t('delete')+'</button>'+
+    '</div>'+
+    '<div class="ed-foot modal-actions"><button type="button" class="ed-trash" onclick="deleteEntryFromModal(\''+id+'\')" title="'+t('delete')+'">'+ICONS.trash+'</button>'+
+    '<button class="cancel-btn" onclick="closeModal()">'+t('cancel')+'</button>'+
     '<button class="create-btn" onclick="saveEntryFromModal(\''+id+'\')">'+t('save')+'</button></div></div>';
   appendModalBackdrop(backdrop, closeModal);
   backdrop.addEventListener('click',(ev)=>{ if(ev.target===backdrop) closeModal(); });
