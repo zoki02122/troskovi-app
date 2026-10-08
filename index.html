@@ -647,6 +647,7 @@ const I18N = {
     ai_format_on: 'poslednji AI unos: obrazac odgovora primenjen ✓',
     ai_format_off: 'poslednji AI unos: obrazac odgovora nije prihvaćen, korišćen rezervni način.',
     ai_format_reason: 'razlog',
+    version_label: 'verzija',
     section_danger: 'opasna zona',
     delete_project: 'obriši projekat',
     back: 'nazad',
@@ -795,6 +796,7 @@ const I18N = {
     ai_format_on: 'last AI entry: response template applied ✓',
     ai_format_off: 'last AI entry: response template not accepted, fallback used.',
     ai_format_reason: 'reason',
+    version_label: 'version',
     section_danger: 'danger zone',
     delete_project: 'delete project',
     back: 'back',
@@ -1105,6 +1107,7 @@ function loadProjectData(pid){
 }
 function persistEntries(){ lsSet('entries:'+currentProjectId, JSON.stringify(entries)); }
 function persistRates(){ lsSet('rates:'+currentProjectId, JSON.stringify(rates)); }
+const APP_VERSION = 2; /* svaka objava: +1, i isti broj u linku ?v=N */
 function getApiKey(){ const k = lsGet('app:apiKey'); return k ? k.value : ''; }
 function setApiKey(key){ lsSet('app:apiKey', key); }
 /* ishod poslednjeg AI unosa: koji oblik zahteva je server prihvatio i zašto je odbio ostale */
@@ -2354,6 +2357,7 @@ function renderSettingsTiles(){
     settingsTile('💾', t('tile_backup'), t('last_backup_label')+': '+lastBackupDisplay(), "openSettingsSub('backup')")+
     settingsTile('🔑', t('tile_gemini_key'), getApiKey() ? t('key_status_set') : t('key_status_missing'), "openSettingsSub('key')")+
     settingsTile('🗑', t('delete_project'), t('tile_delete_sub'), 'confirmDeleteProject()', 'danger')+
+    '<div class="settings-hint" id="appVersionLabel" style="text-align:center; padding-top:16px;">'+t('version_label')+' '+APP_VERSION+'</div>'+
     '</div>';
   m.scrollTop = 0;
 }
