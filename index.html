@@ -114,6 +114,11 @@
   td.col-opis .meta{ display:block; font-size:10.5px; font-weight:400; color:var(--text-dim); margin-top:1px; }
   td.col-amt{ text-align:right; white-space:nowrap; font-weight:700; font-family:var(--font-num); }
   td.col-amt .sub{ display:block; font-size:10px; font-weight:400; color:var(--text-dim); }
+  .no-rate, td.col-amt .sub.no-rate, .pick-row .pv.no-rate{ color:var(--coral); }
+  .tr2-total .tr2-norate{ display:block; position:relative; margin-top:3px; font-size:11.5px; font-weight:600; color:var(--total-val); text-decoration:underline; text-underline-offset:2px; cursor:pointer; }
+  .tr2-total:has(.tr2-norate){ flex-wrap:wrap; row-gap:2px; }
+  .tr2-total .tr2-norate{ flex-basis:100%; text-align:right; }
+  [data-theme="ponoc"] .tr2-total .tr2-norate{ color:var(--coral); margin-top:0; }
   tr.total-row td{ background:var(--warm); font-weight:800; color:var(--gold-deep); font-size:12.5px; padding:7px 10px; }
 
 
@@ -702,7 +707,8 @@ const I18N = {
     version_label: 'verzija',
     found_label: 'pronađeno', undo: 'korak nazad', redo: 'korak napred',
     hd_project: 'Projekat', hd_search: 'Pretraži', hd_currency: 'Valuta', hd_sort: 'Sortiraj',
-    amounts_in: 'Iznosi u', rate_row: 'Kurs', pair_row: 'Valute projekta',
+    base_row: 'Obračun u', base_title: 'obračunska valuta', rate_row: 'Kurs', no_rate: 'nema kurs',
+    rate_auto_hint: 'Kurs za drugu valutu se pojavi ovde sam, čim dodaš stavku u toj valuti.',
     sort_by_date: 'Po datumu', sort_by_category: 'Po kategoriji', sort_by_name: 'Po nazivu',
     section_danger: 'opasna zona',
     delete_project: 'obriši projekat',
@@ -723,7 +729,7 @@ const I18N = {
     no: 'ne',
     rate_title: 'kurs valute',
     rate_how_much: 'koliko',
-    rate_placeholder: 'npr. 117.50',
+    rate_placeholder: 'npr. 117,50',
     currency_pair_title: 'izaberi valute',
     first_currency: 'prva valuta',
     second_currency: 'druga valuta',
@@ -855,7 +861,8 @@ const I18N = {
     version_label: 'version',
     found_label: 'found', undo: 'undo', redo: 'redo',
     hd_project: 'Project', hd_search: 'Search', hd_currency: 'Currency', hd_sort: 'Sort',
-    amounts_in: 'Amounts in', rate_row: 'Rate', pair_row: 'Project currencies',
+    base_row: 'Totals in', base_title: 'totals currency', rate_row: 'Rate', no_rate: 'no rate',
+    rate_auto_hint: 'A rate for another currency appears here by itself as soon as you add an item in it.',
     sort_by_date: 'By date', sort_by_category: 'By category', sort_by_name: 'By name',
     section_danger: 'danger zone',
     delete_project: 'delete project',
@@ -1301,7 +1308,7 @@ async function loadAll(){
   if(l && l.value) currentProjectId = l.value;
 
   if(projects.length === 0){
-    const np = { id: uid('p'), name: t('default_project_name'), language:'auto', displayCurrency:null, activeDate: todayISO(), createdAt: Date.now() };
+    const np = { id: uid('p'), name: t('default_project_name'), language:'auto', baseCurrency:'RSD', activeDate: todayISO(), createdAt: Date.now() };
     projects.push(np);
     currentProjectId = np.id;
     persistProjects();
@@ -1322,12 +1329,16 @@ function persistLastProject(){ lsSet('app:lastProjectId', currentProjectId); }
 function loadProjectData(pid){
   const e = lsGet('entries:'+pid);
   entries = (e && e.value) ? JSON.parse(e.value) : [];
+  /* v7: isti naziv valute uvek isti kod (din → RSD, € → EUR …) */
+  let curFixed = false;
+  entries.forEach(it=>{ const c = normCur(it.valuta); if(c && c!==it.valuta){ it.valuta = c; curFixed = true; } });
+  if(curFixed) lsSet('entries:'+pid, JSON.stringify(entries));
   const r = lsGet('rates:'+pid);
   rates = (r && r.value) ? JSON.parse(r.value) : {};
 }
 function persistEntries(){ lsSet('entries:'+currentProjectId, JSON.stringify(entries)); }
 function persistRates(){ lsSet('rates:'+currentProjectId, JSON.stringify(rates)); }
-const APP_VERSION = 6; /* svaka objava: +1, i isti broj u linku ?v=N */
+const APP_VERSION = 7; /* svaka objava: +1, i isti broj u linku ?v=N */
 function getApiKey(){ const k = lsGet('app:apiKey'); return k ? k.value : ''; }
 function setApiKey(key){ lsSet('app:apiKey', key); }
 /* ishod poslednjeg AI unosa: koji oblik zahteva je server prihvatio i zašto je odbio ostale */
@@ -1346,44 +1357,88 @@ function aiFormatStatusHtml(){
 
 /* ---------- CURRENCY ---------- */
 function currentProject(){ return projects.find(p=>p.id===currentProjectId); }
-function currencyPair(){
-  const proj = currentProject();
-  if(proj && Array.isArray(proj.currencyPair) && proj.currencyPair.length===2) return proj.currencyPair;
-  return ['RSD','EUR'];
+/* v7: obračunska valuta projekta + po jedan kurs za svaku stranu valutu koja postoji u stavkama.
+   Kursevi se čuvaju kao ranije: rates[pairKey(a,b)] = koliko b vredi 1 a (a,b po abecedi). */
+const CUR_ALIAS = {
+  'DIN':'RSD','DINAR':'RSD','DINARA':'RSD','DINARI':'RSD','DINARE':'RSD','ДИН':'RSD','ДИНАР':'RSD','ДИНАРА':'RSD','ДИНАРИ':'RSD',
+  '€':'EUR','EVRO':'EUR','EVRA':'EUR','EVRI':'EUR','EURO':'EUR','EURA':'EUR','EUROS':'EUR','ЕВРО':'EUR','ЕВРА':'EUR',
+  '$':'USD','US$':'USD','DOLAR':'USD','DOLARA':'USD','DOLARI':'USD','DOLLAR':'USD','DOLLARS':'USD','ДОЛАР':'USD','ДОЛАРА':'USD',
+  '£':'GBP','FUNTA':'GBP','FUNTI':'GBP','FUNTE':'GBP','POUND':'GBP','POUNDS':'GBP','ФУНТА':'GBP','ФУНТИ':'GBP',
+  'FT':'HUF','FORINT':'HUF','FORINTA':'HUF','FORINTI':'HUF','FORINTE':'HUF','ФОРИНТ':'HUF','ФОРИНТИ':'HUF',
+  'KM':'BAM','MARKA':'BAM','MARAKA':'BAM','МАРКА':'BAM','МАРАКА':'BAM',
+  'FRANAK':'CHF','FRANAKA':'CHF','FRANKA':'CHF','FRANCI':'CHF','ФРАНАК':'CHF',
+  'DENAR':'MKD','DENARA':'MKD','ДЕНАР':'MKD','ДЕНАРА':'MKD','LEV':'BGN','LEVA':'BGN','ЛЕВ':'BGN','ЛЕВА':'BGN','LEU':'RON','LEI':'RON'
+};
+function normCur(v){
+  const s = String(v==null?'':v).trim().toUpperCase();
+  if(!s) return '';
+  const k = s.replace(/[.\s]/g,'');
+  return CUR_ALIAS[k] || k;
 }
-function setCurrencyPair(curA, curB){
-  const proj = currentProject();
-  if(!proj) return;
-  proj.currencyPair = [curA, curB];
-  if(proj.displayCurrency && proj.displayCurrency!==curA && proj.displayCurrency!==curB){
-    proj.displayCurrency = null;
-  }
-  persistProjects();
-  closeModal();
-  render();
+const CURRENCY_OPTIONS = ['RSD','EUR','USD','GBP','CHF','HUF','BAM'];
+function baseOf(p){
+  if(!p) return 'RSD';
+  return normCur(p.baseCurrency || p.displayCurrency || (Array.isArray(p.currencyPair) && p.currencyPair[0]) || 'RSD') || 'RSD';
 }
-function usedCurrencies(){
-  // tacno dve valute po projektu - biras ih kao na menjacnici
-  return currencyPair().slice();
-}
-function displayCurrency(){
+function baseCurrency(){
   const proj = currentProject();
-  const used = usedCurrencies();
-  if(proj && proj.displayCurrency && used.includes(proj.displayCurrency)) return proj.displayCurrency;
-  return used[0];
+  if(proj && !proj.baseCurrency){ proj.baseCurrency = baseOf(proj); persistProjects(); }
+  return baseOf(proj);
 }
-function setDisplayCurrency(cur){
+function displayCurrency(){ return baseCurrency(); }
+function foreignCurrencies(){
+  const b = baseCurrency(); const out = [];
+  entries.forEach(e=>{ const c = e.valuta; if(c && c!==b && !out.includes(c)) out.push(c); });
+  return out;
+}
+function usedCurrencies(){ return [baseCurrency()].concat(foreignCurrencies()); }
+function setBaseCurrency(cur){
   const proj = currentProject();
-  if(proj){ proj.displayCurrency = cur; persistProjects(); render(); }
+  if(proj){ proj.baseCurrency = cur; persistProjects(); render(); }
 }
 function pairKey(a,b){ return [a,b].sort().join('_'); }
+function directRate(from, to, tbl){
+  const key = pairKey(from,to); const r = (tbl||rates)[key];
+  if(!r) return null;
+  return from===key.split('_')[0] ? r : 1/r;
+}
+function convertRate(from, to){
+  if(from===to) return 1;
+  const d = directRate(from,to);
+  if(d!==null) return d;
+  /* jedan korak preko treće valute (npr. posle promene obračunske valute) */
+  for(const key of Object.keys(rates)){
+    const [a,b] = key.split('_');
+    const mid = a===from ? b : (b===from ? a : null);
+    if(!mid || mid===to) continue;
+    const r2 = directRate(mid,to);
+    if(r2!==null) return directRate(from,mid)*r2;
+  }
+  return null;
+}
 function convert(amount, fromCur, toCur){
-  if(fromCur===toCur) return amount;
-  const key = pairKey(fromCur, toCur);
-  const rate = rates[key];
-  if(!rate) return null;
-  const [a] = key.split('_');
-  return fromCur===a ? amount*rate : amount/rate;
+  const r = convertRate(fromCur, toCur);
+  return r===null ? null : amount*r;
+}
+/* Smer kursa kao u menjačnici: uvek „1 jača = X slabija“ (X ≥ 1). Kad kurs još ne postoji, smer se bira
+   po okvirnoj vrednosti poznatih valuta (samo za smer, ne za računanje); nepoznata valuta: „1 strana = X obračunske“. */
+const CUR_STRENGTH = { GBP:1.18, CHF:1.07, EUR:1, USD:0.92, CAD:0.66, AUD:0.6, BAM:0.51, BGN:0.51, PLN:0.23, RON:0.2, HRK:0.13,
+  SEK:0.087, NOK:0.085, DKK:0.134, CZK:0.04, TRY:0.025, MKD:0.016, RSD:0.0085, ALL:0.0105, HUF:0.0025, RUB:0.01, JPY:0.006, CNY:0.13 };
+function rateDir(foreign, base){
+  const r = convertRate(foreign, base);
+  if(r!==null) return r>=1 ? [foreign, base] : [base, foreign];
+  const a = CUR_STRENGTH[foreign], b = CUR_STRENGTH[base];
+  if(a && b && b>a) return [base, foreign];
+  return [foreign, base];
+}
+function cleanRate(v){ return +(+v).toPrecision(10); }
+function fmtRate(v){
+  const n = v>=1 ? Math.round(v*10000)/10000 : +(+v).toPrecision(4);
+  if(n>=100) return fmtNum(n);
+  const str = String(n);
+  if(str.indexOf('e')>=0) return str;
+  const p = str.split('.');
+  return p[0] + (p[1] ? ','+p[1] : '');
 }
 function getLastGlobalRates(){
   const r = lsGet('app:lastRates');
@@ -1394,12 +1449,13 @@ function saveLastGlobalRate(key, val){
   all[key] = val;
   lsSet('app:lastRates', JSON.stringify(all));
 }
-function setRate(curA, curB, val){
+function setRate(foreign, base, val){
   const v = parseNum(val);
   if(!isNaN(v) && v>0){
-    const key = pairKey(curA,curB);
-    rates[key]=v; persistRates();
-    saveLastGlobalRate(key, v);
+    const key = pairKey(foreign,base);
+    const stored = foreign===key.split('_')[0] ? v : 1/v;
+    rates[key] = stored; persistRates();
+    saveLastGlobalRate(key, stored);
     closeModal(); render();
   }
 }
@@ -1422,7 +1478,7 @@ function switchProject(pid){
   closeModal(); render();
 }
 function createProject(name, language){
-  const np = { id: uid('p'), name: name || t('default_project_name'), language: language||'auto', displayCurrency:null, activeDate: todayISO(), createdAt: Date.now() };
+  const np = { id: uid('p'), name: name || t('default_project_name'), language: language||'auto', baseCurrency: baseOf(currentProject()), activeDate: todayISO(), createdAt: Date.now() };
   projects.push(np); persistProjects(); switchProject(np.id);
 }
 function deleteProject(pid){
@@ -1461,7 +1517,7 @@ function commitEntries(items){
     const id = uid('e');
     entries.push({
       id: id, datum: it.datum || proj.activeDate || todayISO(),
-      opis: it.opis, iznos: it.iznos, valuta: it.valuta,
+      opis: it.opis, iznos: it.iznos, valuta: normCur(it.valuta) || baseCurrency(),
       kategorija: it.kategorija || 'ostalo', napomena: it.napomena || ''
     });
     newIds.push(id);
@@ -1471,6 +1527,7 @@ function commitEntries(items){
 }
 function updateEntry(id, data){
   const e = entries.find(x=>x.id===id); if(!e) return;
+  if(data && 'valuta' in data) data.valuta = normCur(data.valuta) || baseCurrency();
   Object.assign(e, data); persistEntries(); render();
 }
 function deleteEntry(id){
@@ -1492,7 +1549,7 @@ async function callGeminiForExpenses(contentPart, isAudio, isImage){
   const imageNote = isImage ? ' Ovo je fotografija računa/priznanice. Pročitaj sve stavke sa slike (svaki artikal/uslugu kao posebnu stavku ako je jasno razdvojeno, ili ukupan iznos računa kao jednu stavku ako pojedinačne stavke nisu čitljive). Ako na računu piše naziv prodavnice, koristi ga kao deo opisa. Datum na računu koristi kao "datum" polje ako je čitljiv.' : '';
   const appLang = resolveAppLanguage();
   const targetLangName = appLang==='sr-RS' ? 'srpski' : 'engleski';
-  const sys = `Danas: ${today}.${audioNote}${imageNote} Izvuci troškove (izvor može biti na bilo kom jeziku). Vrati SAMO JSON niz, bez markdown, bez ostalog teksta. Svaka stavka: {"opis":kratak opis PREVEDEN na ${targetLangName} jezik, "iznos":broj, "valuta":ISO 3 slova (podrazumevano "${guessCur}" ako nije rečeno), "kategorija":1-2 reči na ${targetLangName} (koristi tačno postojeću ako odgovara: ${knownCats.join(', ') || 'nema'}), "napomena":opciono, "datum":GGGG-MM-DD SAMO ako eksplicitno pomenut (izostavi polje ako nije)}. Više stavki/datuma = više objekata, svaki sa svojim tačnim datumom iz konteksta. Uvek prevedi opis i kategoriju na ${targetLangName}, bez obzira na to na kom jeziku je izvor (tekst, govor, ili tekst sa slike/računa). Naziv prodavnice/firme takođe transliteruj/prevedi u čitljiv oblik na ${targetLangName} pismu ako je izvor na drugom pismu (npr. grčki, ćirilica). Poznate valute: ${known.join(', ') || 'nema'}.`;
+  const sys = `Danas: ${today}.${audioNote}${imageNote} Izvuci troškove (izvor može biti na bilo kom jeziku). Vrati SAMO JSON niz, bez markdown, bez ostalog teksta. Svaka stavka: {"opis":kratak opis PREVEDEN na ${targetLangName} jezik, "iznos":broj, "valuta":ISO 4217 kod, 3 slova (dinar=RSD, evro=EUR, dolar=USD, funta=GBP, forinta=HUF, konvertibilna marka=BAM; podrazumevano "${guessCur}" ako nije rečeno), "kategorija":1-2 reči na ${targetLangName} (koristi tačno postojeću ako odgovara: ${knownCats.join(', ') || 'nema'}), "napomena":opciono, "datum":GGGG-MM-DD SAMO ako eksplicitno pomenut (izostavi polje ako nije)}. Više stavki/datuma = više objekata, svaki sa svojim tačnim datumom iz konteksta. Uvek prevedi opis i kategoriju na ${targetLangName}, bez obzira na to na kom jeziku je izvor (tekst, govor, ili tekst sa slike/računa). Naziv prodavnice/firme takođe transliteruj/prevedi u čitljiv oblik na ${targetLangName} pismu ako je izvor na drugom pismu (npr. grčki, ćirilica). Poznate valute: ${known.join(', ') || 'nema'}.`;
 
   const apiKey = getApiKey();
   if(!apiKey){ throw new Error('nije unet Gemini API ključ. idi u podešavanja (⚙) i unesi ga.'); }
@@ -1581,7 +1638,7 @@ async function callGeminiForExpenses(contentPart, isAudio, isImage){
   if(!Array.isArray(items)) items = [items];
   return items.filter(it=>it && it.opis).map(it=>({
     opis: it.opis, iznos: parseFloat(it.iznos)||0,
-    valuta: (it.valuta||guessCur||'RSD').toUpperCase(),
+    valuta: normCur(it.valuta||guessCur||'RSD'),
     kategorija: it.kategorija || 'ostalo',
     napomena: it.napomena||'', datum: it.datum || null
   }));
@@ -1777,6 +1834,18 @@ function groupByName(){
 }
 
 /* ---------- RENDER ---------- */
+function missingText(n){
+  if(resolveAppLanguage()==='sr-RS'){
+    const m10=n%10, m100=n%100;
+    const w = (m10===1 && m100!==11) ? 'stavka' : (m10>=2 && m10<=4 && (m100<12 || m100>14) ? 'stavke' : 'stavki');
+    return '+ '+n+' '+w+' bez kursa ›';
+  }
+  return '+ '+n+(n===1?' item':' items')+' without rate ›';
+}
+function missingPill(list){
+  if(!list || !list.length) return '';
+  return '<span class="tr2-norate" onclick="event.stopPropagation(); openRateModal(\''+list[0]+'\')">'+missingText(list.length)+'</span>';
+}
 function render(){
   const app = document.getElementById('app');
   const proj = currentProject() || {name:'—', activeDate: todayISO()};
@@ -1786,14 +1855,15 @@ function render(){
 
   const groups = viewMode==='datum' ? groupByDate() : (viewMode==='kategorija' ? groupByCategory() : groupByName());
   const groupKeys = Object.keys(groups);
-  let grandTotal = entries.reduce((s,e)=>{ const c=convert(e.iznos,e.valuta,dispCur); return s+(c||0); },0);
+  let grandTotal = 0; const grandMissing = [];
+  entries.forEach(e=>{ const c=convert(e.iznos,e.valuta,dispCur); if(c===null) grandMissing.push(e.valuta); else grandTotal += c; });
 
   const searchActive = searchOpen && searchQuery.trim().length>0;
   const searchQ = foldDiacritics(searchQuery.trim());
 
   let listHtml = '';
   /* privremeni zbir pretrage: samo pronađene stavke, ništa se ne čuva */
-  let foundCount = 0, foundTotal = 0;
+  let foundCount = 0, foundTotal = 0; const foundMissing = [];
   if(groupKeys.length===0){
     listHtml = '<div class="empty">'+t('empty_project')+'<br>'+t('empty_project_hint')+'</div>';
   } else {
@@ -1808,10 +1878,10 @@ function render(){
       }
       if(searchActive && items.length===0) return '';
       if(searchActive) foundCount += items.length;
-      let groupTotal = 0;
+      let groupTotal = 0; const groupMissing = [];
       const rows = items.map(e=>{
         const conv = convert(e.iznos, e.valuta, dispCur);
-        if(conv!==null) groupTotal += conv;
+        if(conv!==null) groupTotal += conv; else groupMissing.push(e.valuta);
         let mainText, subText;
         if(e.valuta === dispCur){
           mainText = amtHtml(fmtAmt(e.iznos), e.valuta.toLowerCase());
@@ -1821,7 +1891,7 @@ function render(){
           subText = '= '+fmtAmt(e.iznos)+' '+e.valuta.toLowerCase();
         } else {
           mainText = amtHtml(fmtAmt(e.iznos), e.valuta.toLowerCase());
-          subText = t('exchange_rate_unknown');
+          subText = '<span class="no-rate">'+t('no_rate')+'</span>';
         }
         let metaLine;
         if(viewMode==='datum') metaLine = e.kategorija||'';
@@ -1832,11 +1902,11 @@ function render(){
           '<td class="col-opis">'+escapeHtml(e.opis)+(extra?('<span class="meta">'+escapeHtml(extra)+'</span>'):'')+'</td>'+
           '<td class="col-amt num">'+mainText+(subText?('<span class="sub num">'+subText+'</span>'):'')+'</td></tr>';
       }).join('');
-      if(searchActive) foundTotal += groupTotal;
+      if(searchActive){ foundTotal += groupTotal; foundMissing.push.apply(foundMissing, groupMissing); }
       const label = viewMode==='datum' ? dmFromISO(key) : key;
       return '<div class="group-block"><div class="group-head">'+escapeHtml(label)+'</div>'+
         '<table class="entries-table"><tbody>'+rows+
-        '<tr class="total-row"><td>'+t('total')+'</td><td class="col-amt num">'+amtHtml(fmtAmt(groupTotal), dispCur.toLowerCase())+'</td></tr>'+
+        '<tr class="total-row"><td>'+t('total')+'</td><td class="col-amt num">'+amtHtml(fmtAmt(groupTotal), dispCur.toLowerCase())+(groupMissing.length?('<span class="sub no-rate" onclick="event.stopPropagation(); openRateModal(\''+groupMissing[0]+'\')">'+missingText(groupMissing.length)+'</span>'):'')+'</td></tr>'+
         '</tbody></table></div>';
     }).join('');
     if(searchActive && listHtml.trim()===''){
@@ -1899,7 +1969,7 @@ function render(){
     '<button class="hd-ico" onclick="openSortWindow()"><span class="icon-btn hd-sq">'+ic('↕️','sort')+'</span><span class="hd-tx">'+t('hd_sort')+'</span></button>'+
     '</div>')+
     '<div class="tb-row" style="margin-top:7px;">'+
-    (groupKeys.length>0 ? ('<div class="tr2-total'+(searchActive?' is-search':'')+'"><span class="tr2-left"><span class="tr2-proj">'+(searchActive ? escapeHtml(t('found_label')+': '+searchQuery.trim()) : t('total'))+'</span><span class="tr2-label">'+(searchActive?foundCount:entries.length)+' '+t('items_short')+'</span></span><span class="tr2-val num">'+amtHtml(fmtAmt(searchActive?foundTotal:grandTotal), (dispCur||'').toLowerCase())+'</span></div>') : '')+
+    (groupKeys.length>0 ? ('<div class="tr2-total'+(searchActive?' is-search':'')+'"><span class="tr2-left"><span class="tr2-proj">'+(searchActive ? escapeHtml(t('found_label')+': '+searchQuery.trim()) : t('total'))+'</span><span class="tr2-label">'+(searchActive?foundCount:entries.length)+' '+t('items_short')+'</span></span><span class="tr2-val num">'+amtHtml(fmtAmt(searchActive?foundTotal:grandTotal), (dispCur||'').toLowerCase())+'</span>'+missingPill(searchActive?foundMissing:grandMissing)+'</div>') : '')+
     '</div>'+
     '</div>'+
     '<div class="list-area">'+listHtml+
@@ -1930,7 +2000,7 @@ function buildAllProjectsSummary(){
       const [a,b] = key.split('_');
       return `1 ${a} = ${projRates[key]} ${b}`;
     });
-    return { projekat: p.name, id: p.id, stavke: items, kursevi: rateList };
+    return { projekat: p.name, id: p.id, obracunska_valuta: baseOf(p), stavke: items, kursevi: rateList };
   });
 }
 async function askAIAboutExpenses(question, chatHistory){
@@ -2050,18 +2120,19 @@ function applyProjectEntriesChange(projectId, mutatorFn){
     render();
   }
 }
+function normPolja(p){ const o = Object.assign({}, p||{}); if('valuta' in o) o.valuta = normCur(o.valuta) || 'RSD'; return o; }
 function applyAIActions(msgIdx){
   const msg = chatMessages[msgIdx];
   if(!msg || !msg.actions) return;
   msg.actions.forEach(act=>{
     try{
       if(act.tip==='izmeni'){
-        applyProjectEntriesChange(act.projekat_id, list=> list.map(it=> it.id===act.stavka_id ? Object.assign({}, it, act.polja||{}) : it));
+        applyProjectEntriesChange(act.projekat_id, list=> list.map(it=> it.id===act.stavka_id ? Object.assign({}, it, normPolja(act.polja)) : it));
       } else if(act.tip==='obrisi'){
         applyProjectEntriesChange(act.projekat_id, list=> list.filter(it=> it.id!==act.stavka_id));
       } else if(act.tip==='dodaj'){
         applyProjectEntriesChange(act.projekat_id, list=>{
-          list.push(Object.assign({id: uid('e'), napomena:''}, act.polja||{}));
+          list.push(Object.assign({id: uid('e'), napomena:''}, normPolja(act.polja)));
           return list;
         });
       }
@@ -2662,45 +2733,42 @@ function confirmDeleteProject(){
 }
 
 /* ---------- MODAL: kurs ---------- */
-function openRateModal(curA, curB){
-  const key = pairKey(curA,curB);
-  const parts = key.split('_'); const a=parts[0], b=parts[1];
-  const lastGlobal = getLastGlobalRates();
-  const existing = rates[key] || lastGlobal[key] || '';
+function openRateModal(foreign){
+  const base = baseCurrency();
+  if(!foreign || foreign===base) return;
+  const dir = rateDir(foreign, base), from = dir[0], to = dir[1];
+  const cur = convertRate(from, to);
+  const last = directRate(from, to, getLastGlobalRates());
+  const existing = cur!==null ? cleanRate(cur) : (last!==null ? cleanRate(last) : '');
   const backdrop=document.createElement('div'); backdrop.className='modal-backdrop small-modal'; backdrop.id='modalBackdrop';
-  backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button><h2>'+t('rate_title')+'</h2>'+
-    '<div class="field"><label>1 '+a+' = '+t('rate_how_much')+' '+b+'?</label><input type="text" inputmode="decimal" id="rateInput" value="'+(existing?numToField(existing):'')+'" placeholder="'+t('rate_placeholder')+'" autofocus onkeydown="if(event.key===\'Enter\'){ event.preventDefault(); setRate(\''+a+'\',\''+b+'\', this.value); }"></div>'+
-    '<div class="modal-actions"><button class="cancel-btn" onclick="closeModal()">'+t('cancel')+'</button><button class="create-btn" onclick="setRate(\''+a+'\',\''+b+'\', document.getElementById(\'rateInput\').value)">'+t('save')+'</button></div></div>';
+  const save = "setRate('"+from+"','"+to+"', document.getElementById('rateInput').value)";
+  backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button><h2>'+t('rate_title')+' '+foreign.toLowerCase()+'</h2>'+
+    '<div class="field"><label>1 '+from+' = '+t('rate_how_much')+' '+to+'?</label><input type="text" inputmode="decimal" id="rateInput" value="'+(existing!==''?numToField(existing):'')+'" placeholder="'+t('rate_placeholder')+'" autofocus onkeydown="if(event.key===\'Enter\'){ event.preventDefault(); '+save.replace(/"/g,'&quot;')+'; }"></div>'+
+    '<div class="modal-actions"><button class="cancel-btn" onclick="closeModal()">'+t('cancel')+'</button><button class="create-btn" onclick="'+save.replace(/"/g,'&quot;')+'">'+t('save')+'</button></div></div>';
   appendModalBackdrop(backdrop, closeModal);
   backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
   setTimeout(()=>{ const el=document.getElementById('rateInput'); if(el){ el.focus(); el.select(); } }, 100);
 }
 
-/* ---------- v3: kvadrat Valuta (zadati kurs) i prozori Valuta / Sortiraj ---------- */
-/* isti obračun kao stari taster kursa: "1 jača valuta = X slabije", bez obzira u kojoj valuti su iznosi */
-function rateInfo(c, dispCur){
-  let from=c, to=dispCur;
-  const has = !!rates[pairKey(c,dispCur)];
-  if(has && convert(1,c,dispCur) < 1){ from=dispCur; to=c; }
-  return { from: from, to: to, has: has, val: has ? convert(1,from,to) : null };
-}
-function headerRateHtml(dispCur, others){
-  if(!others || !others.length) return '<span class="hd-rate"><span class="hr-v">'+escapeHtml(dispCur.toLowerCase())+'</span></span>';
-  const r = rateInfo(others[0], dispCur);
-  return '<span class="hd-rate"><span class="hr-c">'+r.from.toLowerCase()+'</span><span class="hr-v num">'+(r.has ? Math.round(r.val) : '?')+'</span></span>';
+/* ---------- v7: kvadrat Valuta i prozor Valuta (obračun u + kurs za svaku stranu valutu iz stavki) ---------- */
+function headerRateHtml(base, others){
+  if(!others || !others.length) return '<span class="hd-rate"><span class="hr-v">'+escapeHtml(base.toLowerCase())+'</span></span>';
+  const dir = rateDir(others[0], base);
+  const r = convertRate(dir[0], dir[1]);
+  const v = r===null ? '?' : (r>=10 ? String(Math.round(r)) : fmtRate(r));
+  return '<span class="hd-rate"><span class="hr-c">'+dir[0].toLowerCase()+'</span><span class="hr-v num">'+v+'</span></span>';
 }
 function currencyWindowBody(){
-  const dispCur = displayCurrency();
-  const used = usedCurrencies();
-  const others = used.filter(c=>c!==dispCur);
-  const toggle = '<div class="cur-toggle">'+used.map(c=>'<button class="'+(c===dispCur?'active':'')+'" onclick="event.stopPropagation(); setDisplayCurrency(\''+c+'\'); refreshCurrencyWindow();">'+c.toLowerCase()+'</button>').join('')+'</div>';
+  const base = baseCurrency();
+  const others = foreignCurrencies();
   const rateRows = others.map(c=>{
-    const r = rateInfo(c, dispCur);
-    return '<div class="pick-row" onclick="openRateModal(\''+c+'\',\''+dispCur+'\')"><span>'+t('rate_row')+'</span><span class="pv acc">1 '+r.from.toLowerCase()+' = '+(r.has ? fmtNum(r.val) : '?')+' '+r.to.toLowerCase()+' ›</span></div>';
+    const dir = rateDir(c, base);
+    const r = convertRate(dir[0], dir[1]);
+    return '<div class="pick-row" onclick="openRateModal(\''+c+'\')"><span>'+t('rate_row')+' '+c.toLowerCase()+'</span><span class="pv '+(r===null?'no-rate':'acc')+'">1 '+dir[0].toLowerCase()+' = '+(r===null ? '?' : fmtRate(r))+' '+dir[1].toLowerCase()+' ›</span></div>';
   }).join('');
-  return '<div class="pick-row" style="cursor:default;"><span>'+t('amounts_in')+'</span>'+toggle+'</div>'+
+  return '<div class="pick-row" onclick="openBaseCurrencyWindow()"><span>'+t('base_row')+'</span><span class="pv acc">'+base.toLowerCase()+' ›</span></div>'+
     rateRows+
-    '<div class="pick-row" onclick="openCurrencyPairModal()"><span>'+t('pair_row')+'</span><span class="pv">'+used.join(' · ')+' ›</span></div>';
+    (others.length ? '' : '<div class="settings-hint">'+t('rate_auto_hint')+'</div>');
 }
 function openCurrencyWindow(){
   const backdrop=document.createElement('div'); backdrop.className='modal-backdrop small-modal'; backdrop.id='modalBackdrop';
@@ -2709,6 +2777,17 @@ function openCurrencyWindow(){
   backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
 }
 function refreshCurrencyWindow(){ const b=document.getElementById('curWinBody'); if(b) b.innerHTML = currencyWindowBody(); }
+function openBaseCurrencyWindow(){
+  const base = baseCurrency();
+  const list = [];
+  [base].concat(CURRENCY_OPTIONS, foreignCurrencies()).forEach(c=>{ if(c && !list.includes(c)) list.push(c); });
+  const backdrop=document.createElement('div'); backdrop.className='modal-backdrop small-modal'; backdrop.id='modalBackdrop';
+  backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button><h2>'+t('base_title')+'</h2>'+
+    list.map(c=>'<div class="pick-row" onclick="setBaseCurrency(\''+c+'\'); openCurrencyWindow();"><span>'+c.toLowerCase()+'</span><span class="ok">'+(c===base?'✓':'')+'</span></div>').join('')+
+    '</div>';
+  appendModalBackdrop(backdrop, closeModal);
+  backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
+}
 function openSortWindow(){
   const opts = [['datum','sort_by_date'],['kategorija','sort_by_category'],['naziv','sort_by_name']];
   const backdrop=document.createElement('div'); backdrop.className='modal-backdrop small-modal'; backdrop.id='modalBackdrop';
@@ -2717,25 +2796,6 @@ function openSortWindow(){
     '</div>';
   appendModalBackdrop(backdrop, closeModal);
   backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
-}
-
-/* ---------- MODAL: izbor para valuta (kao menjacnica - bira se tacno dve) ---------- */
-const CURRENCY_OPTIONS = ['RSD','EUR','USD','GBP','CHF'];
-function openCurrencyPairModal(){
-  const pair = currencyPair();
-  const backdrop=document.createElement('div'); backdrop.className='modal-backdrop small-modal'; backdrop.id='modalBackdrop';
-  backdrop.innerHTML = '<div class="modal"><button class="modal-close-x" onclick="closeModal()">✕</button><h2>'+t('currency_pair_title')+'</h2>'+
-    '<div class="field"><label>'+t('first_currency')+'</label><select id="curPickA">'+CURRENCY_OPTIONS.map(c=>'<option value="'+c+'" '+(c===pair[0]?'selected':'')+'>'+c+'</option>').join('')+'</select></div>'+
-    '<div class="field"><label>'+t('second_currency')+'</label><select id="curPickB">'+CURRENCY_OPTIONS.map(c=>'<option value="'+c+'" '+(c===pair[1]?'selected':'')+'>'+c+'</option>').join('')+'</select></div>'+
-    '<div class="modal-actions"><button class="cancel-btn" onclick="closeModal()">'+t('cancel')+'</button><button class="create-btn" onclick="submitCurrencyPair()">'+t('save')+'</button></div></div>';
-  appendModalBackdrop(backdrop, closeModal);
-  backdrop.addEventListener('click',(e)=>{ if(e.target===backdrop) closeModal(); });
-}
-function submitCurrencyPair(){
-  const a = document.getElementById('curPickA').value;
-  const b = document.getElementById('curPickB').value;
-  if(a===b){ showBanner(t('choose_diff_currencies')); return; }
-  setCurrencyPair(a,b);
 }
 
 /* ---------- MODAL: aktivni datum ---------- */
@@ -2853,7 +2913,7 @@ function handleExcelImportFile(inputEl){
         if(!opis || isNaN(iznos)) continue;
         const datumRaw = idx.datum>=0 ? String(r[idx.datum]||'') : '';
         const datum = parseDdMmYyyy(datumRaw) || todayISO();
-        const valuta = idx.valuta>=0 ? String(r[idx.valuta]||'').trim().toUpperCase() : (displayCurrency()||'RSD');
+        const valuta = idx.valuta>=0 ? normCur(r[idx.valuta]) : (displayCurrency()||'RSD');
         const kategorija = idx.kategorija>=0 ? String(r[idx.kategorija]||'').trim() : '';
         const napomena = idx.napomena>=0 ? String(r[idx.napomena]||'').trim() : '';
         items.push({ datum, opis, iznos, valuta, kategorija, napomena });
